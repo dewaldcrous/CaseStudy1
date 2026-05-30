@@ -1,0 +1,20 @@
+Model name : LightGBM
+Saved on   : 2026-05-30
+Load with  : joblib.load('models/best_model.pkl')
+Scaler     : None (tree model, no scaling needed)
+
+Feature columns (X) — must be passed in this order:
+  [00] hour_sin
+  [01] hour_cos
+  [02] dow_sin
+  [03] dow_cos
+  [04] is_morning_rush
+  [05] is_evening_rush
+  [06] is_daytime
+  [07] is_weekend
+  [08] weather
+  [09] intersection_id
+  [10] direction_id
+  [11] ns_direction
+
+Target variable (y): arrival_rate  (veh/s, float)

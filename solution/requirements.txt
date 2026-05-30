@@ -1,0 +1,20 @@
+# Core
+numpy>=1.24
+pandas>=1.5
+scikit-learn>=1.2
+matplotlib>=3.6
+
+# Gradient boosting (optional but recommended)
+lightgbm>=4.0
+xgboost>=2.0
+
+# Model interpretability
+shap>=0.44
+
+# Interactive dashboard
+streamlit>=1.35
+plotly>=5.0
+
+# H2O AutoML (optional — requires Java 11+)
+# pip install h2o
+# h2o>=3.44

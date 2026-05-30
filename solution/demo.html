@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Traffic Light Optimisation — Live Demo</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI",Arial,sans-serif;background:#0e1117;color:#e0e4f0;height:100vh;overflow:hidden}
+    #app{display:grid;grid-template-columns:220px 1fr 1fr;grid-template-rows:auto 1fr auto;height:100vh;gap:0}
+
+    /* Header */
+    #header{grid-column:1/4;background:linear-gradient(135deg,#0f3460,#16213e);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #4fc3f7}
+    #header h1{font-size:1.2em;color:#4fc3f7;font-weight:700}
+    #header .kpis{display:flex;gap:28px}
+    .kpi{text-align:center}
+    .kpi .val{font-size:1.5em;font-weight:700;color:#4fc3f7;line-height:1}
+    .kpi .lbl{font-size:.68em;opacity:.7;text-transform:uppercase;letter-spacing:.5px}
+    #imp-val{font-size:1.5em;font-weight:700;line-height:1}
+
+    /* Sidebar */
+    #sidebar{background:#1a1f2e;padding:14px;border-right:1px solid #2a3050;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 100px)}
+    #sidebar h3{font-size:.78em;text-transform:uppercase;letter-spacing:1px;color:#4fc3f7;border-bottom:1px solid #2a3050;padding-bottom:5px;margin-bottom:4px}
+    select,input[type=range]{width:100%;padding:6px 8px;background:#0e1117;border:1px solid #2a3050;border-radius:4px;color:#e0e4f0;font-size:.82em}
+    .label{font-size:.75em;color:#aaa;margin-bottom:2px;display:block}
+    .btn{width:100%;padding:8px;border:none;border-radius:5px;cursor:pointer;font-size:.82em;font-weight:600;transition:opacity .15s}
+    .btn:hover{opacity:.85}
+    .btn-green{background:#2ecc71;color:#0e1117}
+    .btn-red{background:#e74c3c;color:#fff}
+    .btn-blue{background:#3498db;color:#fff}
+    .btn-grey{background:#555;color:#fff}
+    .btn-warn{background:#f39c12;color:#0e1117}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .sep{border-top:1px solid #2a3050;margin:4px 0}
+    .model-table{font-size:.72em;width:100%;border-collapse:collapse}
+    .model-table td,.model-table th{padding:3px 5px;border-bottom:1px solid #2a3050}
+    .model-table th{color:#4fc3f7;font-size:.68em;text-transform:uppercase}
+    .best-row{background:#1e3a2e}
+
+    /* Main panels */
+    #grid-panel{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;position:relative}
+    #chart-panel{background:#111;display:flex;flex-direction:column;padding:8px;gap:8px}
+    #grid-canvas{border-radius:8px;background:#1a1f2e}
+    .chart-wrap{flex:1;position:relative;min-height:0}
+    canvas.chart{width:100%;height:100%;display:block;border-radius:6px;background:#1a252f}
+    #grid-label{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:.78em;color:#4fc3f7;background:rgba(0,0,0,.6);padding:3px 10px;border-radius:12px;pointer-events:none}
+
+    /* Status bar */
+    #statusbar{grid-column:1/4;background:#0a0d14;border-top:1px solid #1a2050;padding:5px 16px;font-size:.72em;color:#888;display:flex;gap:24px}
+    #statusbar span b{color:#4fc3f7}
+    .badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:.85em;font-weight:700}
+    .badge-green{background:#1e3a2e;color:#2ecc71}
+    .badge-red{background:#3a1e1e;color:#e74c3c}
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div>
+      <h1>🚦 Smart Traffic Light Optimisation — Live Demo</h1>
+      <div style="font-size:.72em;color:#aaa;margin-top:2px">Webster (1958) adaptive controller · LightGBM demand model · 4-intersection network</div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="val" id="t-val">0s</div><div class="lbl">Sim time</div></div>
+      <div class="kpi"><div class="val" id="bwait-val">—</div><div class="lbl">Baseline wait</div></div>
+      <div class="kpi"><div class="val" id="owait-val">—</div><div class="lbl">Optimised wait</div></div>
+      <div class="kpi"><div id="imp-val">—</div><div class="lbl">Improvement</div></div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <!-- WHAT'S HAPPENING NOW -->
+    <div style="background:#1e2a3a;border-radius:8px;padding:10px;margin-bottom:10px;border-left:3px solid #4fc3f7">
+      <h3 style="margin-bottom:6px;border:none;padding:0">📊 What's Happening</h3>
+      <div id="whats-happening" style="font-size:.75em;color:#a8d8ea;line-height:1.4">
+        <div>Press <b>▶ Start</b> to begin simulation</div>
+      </div>
+    </div>
+
+    <div>
+      <h3>Scenario</h3>
+      <span class="label">Select scenario</span>
+      <select id="scenario-sel">
+        <option value="am_rush">🌅 Monday 8 AM Rush</option>
+        <option value="full_day">🕐 Full Day Cycle (6am→)</option>
+        <option value="incident">⚠️ AM Rush + Incident</option>
+      </select>
+      <div id="scenario-info" style="font-size:.7em;color:#72c88b;margin-top:6px;padding:6px;background:#1a2e1a;border-radius:4px">
+        <b>AM Rush:</b> NS demand is 4× higher than EW. Watch Webster give ~80% green to NS.
+      </div>
+    </div>
+
+    <div>
+      <h3>Controls</h3>
+      <span class="label">Speed: <span id="speed-lbl">5</span>x</span>
+      <input type="range" id="speed-sl" min="1" max="30" value="5"/>
+      <div style="margin-top:6px" class="row2">
+        <button class="btn btn-green" id="start-btn">▶ Start</button>
+        <button class="btn btn-grey"  id="pause-btn">⏸ Pause</button>
+      </div>
+      <button class="btn btn-blue" id="reset-btn" style="margin-top:6px">↺ Reset</button>
+    </div>
+
+    <div class="sep"></div>
+    <div>
+      <h3>⚠ Incident</h3>
+      <span class="label">Intersection</span>
+      <select id="inc-int"><option>0</option><option>1</option><option>2</option><option>3</option></select>
+      <span class="label" style="margin-top:5px">Direction</span>
+      <select id="inc-dir"><option>north</option><option>south</option><option>east</option><option>west</option></select>
+      <span class="label" style="margin-top:5px">Capacity remaining: <span id="cap-lbl">15</span>%</span>
+      <input type="range" id="cap-sl" min="0" max="100" value="15"/>
+      <div class="row2" style="margin-top:6px">
+        <button class="btn btn-warn" id="trig-btn">⚠ Trigger</button>
+        <button class="btn btn-green" id="clr-btn">✓ Clear</button>
+      </div>
+      <div id="inc-status" style="font-size:.72em;color:#f39c12;margin-top:5px;min-height:14px"></div>
+    </div>
+
+    <div class="sep"></div>
+    <div>
+      <h3>ML Models</h3>
+      <table class="model-table">
+        <tr><th>Model</th><th>MAE</th><th>R²</th></tr>
+        <tr class="best-row"><td>LightGBM ★</td><td>0.00545</td><td>0.9852</td></tr>
+        <tr><td>Rand. Forest</td><td>0.00547</td><td>0.9853</td></tr>
+        <tr><td>XGBoost</td><td>0.00574</td><td>0.9857</td></tr>
+        <tr><td>Grad. Boost</td><td>0.00625</td><td>0.9838</td></tr>
+        <tr><td>Ridge</td><td>0.05278</td><td>0.2874</td></tr>
+      </table>
+      <div style="font-size:.68em;color:#888;margin-top:5px">Demand model replicated from<br>LightGBM Rules A–F (JS)</div>
+    </div>
+
+    <div class="sep"></div>
+    <div>
+      <h3 style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        📖 Understanding Numbers <span style="float:right;font-size:.8em">▼</span>
+      </h3>
+      <div id="numbers-help" style="font-size:.68em;color:#a8d8ea;line-height:1.4">
+        <div style="margin-bottom:5px">
+          <b style="color:#4fc3f7">Wait Time</b> — Avg seconds at red. <b>Lower=better</b>
+        </div>
+        <div style="margin-bottom:5px">
+          <b style="color:#4fc3f7">Improvement</b> — (Base−Opt)/Base×100. <span style="color:#2ecc71">≥20%</span>=pass
+        </div>
+        <div style="margin-bottom:5px">
+          <b style="color:#4fc3f7">Queue</b> — Total vehicles waiting
+        </div>
+        <div style="margin-bottom:5px">
+          <b style="color:#4fc3f7">Throughput</b> — veh/s cleared (max ~8)
+        </div>
+        <div>
+          <b style="color:#4fc3f7">MAE</b> — Prediction error (~1.7% at rush)
+        </div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+    <div style="font-size:.65em;color:#666;text-align:center;padding:4px">
+      Scroll ↕ for more options
+    </div>
+  </div>
+
+  <!-- GRID PANEL -->
+  <div id="grid-panel">
+    <canvas id="grid-canvas"></canvas>
+    <div id="grid-label">Optimised (Webster) — live</div>
+    <!-- Visual Legend -->
+    <div id="grid-legend" style="position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,0.75);padding:10px 14px;border-radius:8px;font-size:.72em;color:#e0e4f0">
+      <div style="font-weight:700;color:#4fc3f7;margin-bottom:6px">Legend</div>
+      <div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+        <span style="width:12px;height:12px;background:#2ecc71;border-radius:50%;display:inline-block"></span>
+        <span>GREEN light (vehicles can pass)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+        <span style="width:12px;height:12px;background:#e74c3c;border-radius:50%;display:inline-block"></span>
+        <span>RED light (vehicles queue)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+        <span style="width:20px;height:8px;background:#2ecc71;opacity:0.6;display:inline-block;border-radius:2px"></span>
+        <span>Queue bar (length = vehicles)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+        <span style="color:#f39c12">⚠</span>
+        <span>Incident (capacity reduced)</span>
+      </div>
+    </div>
+    <!-- Current Timings Display -->
+    <div id="timing-display" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.75);padding:10px 14px;border-radius:8px;font-size:.72em;color:#e0e4f0">
+      <div style="font-weight:700;color:#4fc3f7;margin-bottom:6px">Current Timings (Int 0)</div>
+      <div id="timing-ns" style="margin:2px 0">NS Green: <b style="color:#2ecc71">30s</b></div>
+      <div id="timing-ew" style="margin:2px 0">EW Green: <b style="color:#2ecc71">30s</b></div>
+      <div id="timing-cycle" style="margin:2px 0;color:#888">Cycle: <b>60s</b></div>
+      <div id="timing-split" style="margin-top:4px;font-size:.9em;color:#72c88b">Split: 50% / 50%</div>
+    </div>
+  </div>
+
+  <!-- CHART PANEL -->
+  <div id="chart-panel">
+    <div style="font-size:.78em;color:#4fc3f7;font-weight:600;padding:2px 4px;display:flex;justify-content:space-between;align-items:center">
+      <span>Live Metrics — Baseline (red) vs Optimised (green)</span>
+      <span style="font-size:.85em;color:#888">Target: ≥20% improvement</span>
+    </div>
+    <div class="chart-wrap" style="position:relative">
+      <canvas id="chart-wait" class="chart"></canvas>
+      <div class="chart-info" style="position:absolute;top:4px;right:8px;font-size:.65em;color:#888;background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:4px">
+        Lower = Better • Green below red = success
+      </div>
+    </div>
+    <div class="chart-wrap" style="position:relative">
+      <canvas id="chart-queue" class="chart"></canvas>
+      <div class="chart-info" style="position:absolute;top:4px;right:8px;font-size:.65em;color:#888;background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:4px">
+        Total vehicles waiting • Lower = less congestion
+      </div>
+    </div>
+    <div class="chart-wrap" style="position:relative">
+      <canvas id="chart-thru" class="chart"></canvas>
+      <div class="chart-info" style="position:absolute;top:4px;right:8px;font-size:.65em;color:#888;background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:4px">
+        Vehicles cleared/sec • Higher = more efficient
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <span><b>Step:</b> <span id="sb-step">0</span>s</span>
+    <span><b>Hour:</b> <span id="sb-hour">8</span>:00</span>
+    <span><b>Departed:</b> <span id="sb-dep">0</span> vehicles</span>
+    <span><b>Queue:</b> <span id="sb-q">0</span> waiting</span>
+    <span id="sb-inc"></span>
+    <span id="sb-formula" style="color:#4fc3f7;cursor:help" title="Webster's Formula: Optimal cycle C* = (1.5×L + 5) / (1 - Y), where L=lost time, Y=sum of flow ratios">
+      📐 C* = (1.5L+5)/(1−Y)
+    </span>
+    <span style="margin-left:auto;color:#555">LightGBM demand · Webster optimizer · 0.5 veh/s saturation · Poisson arrivals</span>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  SIMULATION ENGINE  (mirrors src/simulator.py)
+// ══════════════════════════════════════════════════════════
+
+const SATURATION = 0.5;   // veh/s
+const DT = 1.0;
+
+const INTERSECTION_FACTORS = [1.0, 0.85, 1.20, 0.95];
+const DIRECTION_FACTORS = {north:0.9, south:1.1, east:1.0, west:0.95};
+const DIRECTIONS = ['north','south','east','west'];
+
+// Demand model — Rules A–F from ml_model.py, no noise (deterministic)
+function getDemandRate(hour, dow, intId, dir) {
+  const isWeekend = dow >= 5;
+  const ifact = INTERSECTION_FACTORS[intId];
+  const dfact = DIRECTION_FACTORS[dir];
+  const isNS  = dir === 'north' || dir === 'south';
+
+  let base, nsMult = 1, ewMult = 1;
+  if (isWeekend) {
+    base = 0.06 + 0.04 * Math.exp(-Math.pow(hour - 13, 2) / 18);
+  } else {
+    const morning = 0.20 * Math.exp(-Math.pow(hour - 8.0,  2) / 2.0);
+    const evening = 0.16 * Math.exp(-Math.pow(hour - 17.5, 2) / 3.0);
+    base = 0.015 + morning + evening;
+    const amW = Math.exp(-Math.pow(hour - 8.0,  2) / 2.0);
+    const pmW = Math.exp(-Math.pow(hour - 17.5, 2) / 3.0);
+    nsMult = 1.0 + 2.0 * amW - 0.5 * pmW;
+    ewMult = 1.0 + 1.5 * pmW - 0.3 * amW;
+  }
+  const dm = isNS ? nsMult : ewMult;
+  return Math.max(0.005, base * ifact * dfact * dm);
+}
+
+// Poisson random
+function poisson(lambda) {
+  const L = Math.exp(-lambda);
+  let k = 0, p = 1;
+  while (p > L) { k++; p *= Math.random(); }
+  return k - 1;
+}
+
+class Intersection {
+  constructor(id, col, row) {
+    this.id = id;
+    this.pos = {x: col, y: row};
+    this.queues = {north:[], south:[], east:[], west:[]};
+    this.lightStates = {north:'GREEN', south:'GREEN', east:'RED', west:'RED'};
+    this.timer = 0;
+    this.nsGreen = 30;
+    this.ewGreen = 30;
+    this.phase = 'NS';
+  }
+  greenDirs() { return DIRECTIONS.filter(d => this.lightStates[d]==='GREEN'); }
+  redDirs()   { return DIRECTIONS.filter(d => this.lightStates[d]==='RED'); }
+  queueLengths() {
+    const r = {};
+    for (const d of DIRECTIONS) r[d] = this.queues[d].length;
+    return r;
+  }
+}
+
+class TrafficSimulator {
+  constructor(nIntersections=4) {
+    this.intersections = [];
+    const side = Math.ceil(Math.sqrt(nIntersections));
+    for (let i=0; i<nIntersections; i++) {
+      this.intersections.push(new Intersection(i, i%side, Math.floor(i/side)));
+    }
+    this.time         = 0;
+    this.totalDep     = 0;
+    this.totalWait    = 0;
+    this.vidCtr       = 0;
+    this.incidents    = {};  // {intId: {dir: capacityFactor}}
+  }
+  // implements starter-code update_lights() TODO
+  updateLights(timings) {
+    for (const inter of this.intersections) {
+      const t = timings[inter.id] || {};
+      inter.nsGreen = t.ns_green || 30;
+      inter.ewGreen = t.ew_green || 30;
+    }
+  }
+  // implements starter-code spawn_vehicle() TODO
+  spawnVehicle(arrivalRates) {
+    for (const inter of this.intersections) {
+      for (const dir of DIRECTIONS) {
+        let rate = (arrivalRates[inter.id] || {})[dir] || 0.03;
+        const inc = (this.incidents[inter.id] || {})[dir];
+        if (inc !== undefined) rate *= inc;
+        const n = poisson(rate * DT);
+        for (let k=0; k<n; k++) {
+          inter.queues[dir].push({id: this.vidCtr++, wait: 0, arrivedAt: this.time});
+        }
+      }
+    }
+  }
+  // implements starter-code step() TODO
+  step(arrivalRates) {
+    this.spawnVehicle(arrivalRates);
+    for (const inter of this.intersections) {
+      // Discharge green approaches
+      for (const dir of inter.greenDirs()) {
+        const q = inter.queues[dir];
+        if (q.length > 0) {
+          const nDep = Math.min(q.length, Math.floor(SATURATION * DT + Math.random()));
+          const departed = q.splice(0, nDep);
+          for (const v of departed) {
+            this.totalWait += v.wait;
+            this.totalDep++;
+          }
+        }
+      }
+      // Accumulate wait for ALL queued vehicles
+      for (const dir of DIRECTIONS) {
+        for (const v of inter.queues[dir]) v.wait += DT;
+      }
+      // Phase transitions
+      inter.timer += DT;
+      const dur = inter.phase === 'NS' ? inter.nsGreen : inter.ewGreen;
+      if (inter.timer >= dur) {
+        inter.timer = 0;
+        if (inter.phase === 'NS') {
+          inter.phase = 'EW';
+          inter.lightStates = {north:'RED', south:'RED', east:'GREEN', west:'GREEN'};
+        } else {
+          inter.phase = 'NS';
+          inter.lightStates = {north:'GREEN', south:'GREEN', east:'RED', west:'RED'};
+        }
+      }
+    }
+    this.time += DT;
+  }
+  // implements starter-code get_metrics() TODO
+  getMetrics() {
+    const avgWait = this.totalDep > 0 ? this.totalWait / this.totalDep : 0;
+    let totalQ = 0;
+    for (const i of this.intersections) for (const d of DIRECTIONS) totalQ += i.queues[d].length;
+    return { avgWait, throughput: this.totalDep / Math.max(this.time, 1), totalQ, totalDep: this.totalDep, time: this.time };
+  }
+  getQueueLengths() {
+    const r = {};
+    for (const i of this.intersections) r[i.id] = i.queueLengths();
+    return r;
+  }
+  triggerIncident(intId, dir, cap) {
+    if (!this.incidents[intId]) this.incidents[intId] = {};
+    this.incidents[intId][dir] = cap;
+  }
+  clearIncident(intId, dir) {
+    if (dir && this.incidents[intId]) delete this.incidents[intId][dir];
+    else delete this.incidents[intId];
+  }
+  reset() {
+    const n = this.intersections.length;
+    Object.assign(this, new TrafficSimulator(n));
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  OPTIMIZER  (mirrors src/optimizer.py)
+// ══════════════════════════════════════════════════════════
+
+const L=4, SAT=0.5, MIN_G=10, MAX_C=120, MIN_C=24;
+
+function websterTimings(predictedRates, queueLengths) {
+  const timings = {};
+  const iids = Object.keys(predictedRates).map(Number);
+  for (const iid of iids) {
+    const rates  = predictedRates[iid] || {};
+    const queues = queueLengths[iid]   || {};
+    const nsPred = Math.max(rates.north||0.05, rates.south||0.05);
+    const ewPred = Math.max(rates.east||0.05,  rates.west||0.05);
+    const nsQ = ((queues.north||0)+(queues.south||0)) / 20 * SAT;
+    const ewQ = ((queues.east||0)+(queues.west||0))   / 20 * SAT;
+    const alpha = 0.7;
+    const ns = Math.max(alpha*nsPred + (1-alpha)*nsQ, 0.005);
+    const ew = Math.max(alpha*ewPred + (1-alpha)*ewQ, 0.005);
+    const yNS = ns/SAT, yEW = ew/SAT;
+    const Y   = Math.min(yNS+yEW, 0.97);
+    const C   = Math.min(Math.max((1.5*L+5)/(1-Y), MIN_C), MAX_C);
+    const eff = C - L;
+    let gNS = eff * yNS/(yNS+yEW);
+    let gEW = eff * yEW/(yNS+yEW);
+    if (gNS < MIN_G) { gEW -= (MIN_G-gNS); gNS = MIN_G; }
+    if (gEW < MIN_G) { gNS -= (MIN_G-gEW); gEW = MIN_G; }
+    timings[iid] = { ns_green: Math.max(gNS,MIN_G), ew_green: Math.max(gEW,MIN_G) };
+  }
+  return timings;
+}
+
+function fixedTimings(iids) {
+  const t = {};
+  for (const i of iids) t[i] = {ns_green:30, ew_green:30};
+  return t;
+}
+
+// ══════════════════════════════════════════════════════════
+//  SIMULATION STATE
+// ══════════════════════════════════════════════════════════
+
+const SCENARIOS = {
+  am_rush:  {hour:8,  dow:0, label:'Mon 8 AM Rush'},
+  full_day: {hour:6,  dow:0, label:'Full Day (6am→)'},
+  incident: {hour:8,  dow:0, label:'AM Rush + Incident'},
+};
+
+let simBase, simOpt, cfg;
+let step = 0, running = false;
+const HIST_MAX = 500;
+const histBase = {time:[], wait:[], queue:[], thru:[]};
+const histOpt  = {time:[], wait:[], queue:[], thru:[]};
+
+function getRates(hour, dow) {
+  const r = {};
+  for (let i=0; i<4; i++) {
+    r[i] = {};
+    for (const d of DIRECTIONS) r[i][d] = getDemandRate(hour, dow, i, d);
+  }
+  return r;
+}
+
+function initSim() {
+  const scenario = document.getElementById('scenario-sel').value;
+  cfg = SCENARIOS[scenario];
+  simBase = new TrafficSimulator(4);
+  simOpt  = new TrafficSimulator(4);
+  step = 0;
+  for (const h of [histBase, histOpt]) { h.time=[];h.wait=[];h.queue=[];h.thru=[]; }
+  const iids=[0,1,2,3];
+  simBase.updateLights(fixedTimings(iids));
+  const rates0 = getRates(cfg.hour, cfg.dow);
+  simOpt.updateLights(websterTimings(rates0, {}));
+  document.getElementById('inc-status').textContent = '';
+  render();
+}
+
+function advanceSim(n) {
+  const scenario = document.getElementById('scenario-sel').value;
+  for (let k=0; k<n; k++) {
+    const hour  = Math.floor((cfg.hour*3600 + step) % 86400 / 3600);
+    const rates = getRates(hour, cfg.dow);
+
+    // auto-incident for incident scenario
+    if (scenario === 'incident') {
+      if (step === 150) {
+        simBase.triggerIncident(0,'north',0.15);
+        simOpt.triggerIncident(0,'north',0.15);
+        document.getElementById('inc-status').textContent = '⚠ Incident active (int 0, north)';
+      }
+      if (step === 240) {
+        simBase.clearIncident(0,'north');
+        simOpt.clearIncident(0,'north');
+        document.getElementById('inc-status').textContent = '✓ Incident cleared';
+      }
+    }
+
+    if (step % 60 === 0) {
+      simBase.updateLights(fixedTimings([0,1,2,3]));
+      simOpt.updateLights(websterTimings(rates, simOpt.getQueueLengths()));
+    }
+    simBase.step(rates);
+    simOpt.step(rates);
+    step++;
+  }
+  // record history
+  const mb = simBase.getMetrics(), mo = simOpt.getMetrics();
+  histBase.time.push(step); histBase.wait.push(mb.avgWait);
+  histBase.queue.push(mb.totalQ); histBase.thru.push(mb.throughput);
+  histOpt.time.push(step);  histOpt.wait.push(mo.avgWait);
+  histOpt.queue.push(mo.totalQ);  histOpt.thru.push(mo.throughput);
+  // trim history
+  for (const h of [histBase, histOpt]) {
+    if (h.time.length > HIST_MAX) { ['time','wait','queue','thru'].forEach(k => h[k].shift()); }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  CANVAS RENDERING
+// ══════════════════════════════════════════════════════════
+
+const GRID_PAD = 50;  // Increased to accommodate row/column labels
+const STATE_COL = {GREEN:'#2ecc71', RED:'#e74c3c', YELLOW:'#f39c12'};
+
+function resizeGridCanvas() {
+  const panel = document.getElementById('grid-panel');
+  const cvs   = document.getElementById('grid-canvas');
+  const sz    = Math.min(panel.clientWidth, panel.clientHeight) - 20;
+  cvs.width  = sz;
+  cvs.height = sz;
+}
+
+function drawGrid(sim) {
+  const cvs = document.getElementById('grid-canvas');
+  const ctx = cvs.getContext('2d');
+  const W = cvs.width, H = cvs.height;
+  const PAD = GRID_PAD;
+  const cellW = (W - 2*PAD) / 2;
+  const cellH = (H - 2*PAD) / 2;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#1a1f2e';
+  ctx.fillRect(0,0,W,H);
+
+  // Draw intersection headers (column labels)
+  ctx.fillStyle = '#4fc3f7';
+  ctx.font = 'bold 11px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('West Side', PAD + cellW*0.5, PAD - 8);
+  ctx.fillText('East Side', PAD + cellW*1.5, PAD - 8);
+
+  // Draw row labels
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('North', PAD - 10, PAD + cellH*0.5);
+  ctx.fillText('South', PAD - 10, PAD + cellH*1.5);
+
+  // Draw road grid
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 10;
+  for (let c=0; c<2; c++) {
+    const x = PAD + (c+0.5)*cellW;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+  }
+  for (let r=0; r<2; r++) {
+    const y = PAD + (r+0.5)*cellH;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+
+  // Intersection names for clarity
+  const intNames = ['Int 0 (NW)', 'Int 1 (NE)', 'Int 2 (SW)', 'Int 3 (SE)'];
+
+  for (const inter of sim.intersections) {
+    const cx = PAD + (inter.pos.x+0.5)*cellW;
+    const cy = PAD + (inter.pos.y+0.5)*cellH;
+    const ql  = inter.queueLengths();
+    const R   = 18;  // intersection circle radius
+
+    // Intersection circle
+    ctx.beginPath();
+    ctx.arc(cx,cy,R,0,2*Math.PI);
+    ctx.fillStyle = '#333';
+    ctx.fill();
+    ctx.strokeStyle='#888'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // Label (ID number inside circle)
+    ctx.fillStyle='#fff'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(inter.id, cx, cy);
+
+    // Intersection name label above
+    const shortNames = ['NW', 'NE', 'SW', 'SE'];
+    ctx.fillStyle='#4fc3f7'; ctx.font='bold 10px Segoe UI'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText(`Int ${inter.id} (${shortNames[inter.id]})`, cx, cy - R - 25);
+
+    // Per-direction: light dot + queue bar
+    const dirs = {
+      north: {dx:0,         dy:-(R+12), bx:-12, by:-(R+14+Math.min(ql.north,20)*4), bw:24, bh:Math.min(ql.north,20)*4},
+      south: {dx:0,         dy:+(R+12), bx:-12, by:+(R+14),                          bw:24, bh:Math.min(ql.south,20)*4},
+      east:  {dx:+(R+12),   dy:0,       bx:+(R+14), by:-12, bw:Math.min(ql.east,20)*4,  bh:24},
+      west:  {dx:-(R+12),   dy:0,       bx:-(R+14+Math.min(ql.west,20)*4), by:-12, bw:Math.min(ql.west,20)*4, bh:24},
+    };
+    for (const [dir, d] of Object.entries(dirs)) {
+      const col = STATE_COL[inter.lightStates[dir]];
+      // light dot
+      ctx.beginPath();
+      ctx.arc(cx+d.dx, cy+d.dy, 8, 0, 2*Math.PI);
+      ctx.fillStyle = col; ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1; ctx.stroke();
+      // queue bar
+      if (ql[dir] > 0) {
+        ctx.fillStyle = col+'99';
+        ctx.fillRect(cx+d.bx, cy+d.by, d.bw, d.bh);
+      }
+      // queue count
+      const qx = dir==='east'  ? cx+(R+14+Math.min(ql[dir],20)*4+6) :
+                 dir==='west'  ? cx-(R+14+Math.min(ql[dir],20)*4+16) :
+                 cx+d.dx;
+      const qy = dir==='north' ? cy-(R+14+Math.min(ql[dir],20)*4+10) :
+                 dir==='south' ? cy+(R+14+Math.min(ql[dir],20)*4+10) :
+                 cy+d.dy;
+      ctx.fillStyle='#fff'; ctx.font='10px Segoe UI'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(ql[dir], qx, qy);
+    }
+
+    // Incident marker
+    if (sim.incidents[inter.id] && Object.keys(sim.incidents[inter.id]).length) {
+      ctx.fillStyle='#f39c12'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center';
+      ctx.fillText('⚠ INCIDENT', cx, cy - cellH*0.35);
+    }
+  }
+}
+
+// ── Minimal line chart renderer ──────────────────────────────────
+function drawChart(canvasId, dataA, dataB, labelA, labelB, title, maxY) {
+  const cvs = document.getElementById(canvasId);
+  if (!cvs) return;
+  const ctx = cvs.getContext('2d');
+  const W = cvs.offsetWidth, H = cvs.offsetHeight;
+  cvs.width = W; cvs.height = H;
+  const PL=52, PR=12, PT=20, PB=22;
+  const CW = W-PL-PR, CH = H-PT-PB;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#1a252f'; ctx.fillRect(0,0,W,H);
+
+  // title
+  ctx.fillStyle='#4fc3f7'; ctx.font='bold 10px Segoe UI';
+  ctx.textAlign='left'; ctx.fillText(title, PL, 13);
+
+  const n = Math.max(dataA.length, dataB.length);
+  if (n < 2) return;
+  const mx = maxY || Math.max(...dataA, ...dataB, 0.01) * 1.1;
+
+  // grid lines
+  ctx.strokeStyle='#2a3050'; ctx.lineWidth=0.8;
+  for (let i=0; i<=4; i++) {
+    const y = PT + CH - (CH*i/4);
+    ctx.beginPath(); ctx.moveTo(PL,y); ctx.lineTo(W-PR,y); ctx.stroke();
+    ctx.fillStyle='#666'; ctx.font='9px Segoe UI'; ctx.textAlign='right';
+    ctx.fillText((mx*i/4).toFixed(1), PL-3, y+3);
+  }
+
+  // draw series
+  function drawLine(data, col) {
+    if (!data.length) return;
+    ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=1.8;
+    for (let i=0; i<data.length; i++) {
+      const x = PL + (i/(data.length-1||1))*CW;
+      const y = PT + CH - (Math.min(data[i],mx)/mx)*CH;
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    // fill under
+    ctx.lineTo(PL+CW, PT+CH); ctx.lineTo(PL, PT+CH); ctx.closePath();
+    ctx.fillStyle=col+'22'; ctx.fill();
+  }
+  drawLine(dataA, '#e74c3c');
+  drawLine(dataB, '#2ecc71');
+
+  // legend
+  ctx.font='9px Segoe UI'; ctx.textAlign='left';
+  [[labelA,'#e74c3c'],[labelB,'#2ecc71']].forEach(([lbl,col],i) => {
+    ctx.fillStyle=col; ctx.fillRect(PL+i*80, H-10, 12, 6);
+    ctx.fillStyle='#ccc'; ctx.fillText(lbl, PL+i*80+15, H-5);
+  });
+}
+
+// ── Main render ──────────────────────────────────────────────────
+function updateKPIs() {
+  if (!simBase || !simOpt) return;
+  const mb = simBase.getMetrics(), mo = simOpt.getMetrics();
+  document.getElementById('t-val').textContent = step+'s';
+  document.getElementById('bwait-val').textContent = mb.avgWait.toFixed(1)+'s';
+  document.getElementById('owait-val').textContent = mo.avgWait.toFixed(1)+'s';
+  const imp = mb.avgWait > 0 ? (mb.avgWait-mo.avgWait)/mb.avgWait*100 : 0;
+  const el = document.getElementById('imp-val');
+  el.textContent = Math.max(0,imp).toFixed(1)+'%';
+  el.style.color = imp>=20 ? '#2ecc71' : '#e74c3c';
+  document.getElementById('sb-step').textContent = step;
+  const currentHour = Math.floor((cfg.hour*3600 + step) % 86400 / 3600);
+  document.getElementById('sb-hour').textContent = currentHour;
+  document.getElementById('sb-dep').textContent  = mo.totalDep;
+  document.getElementById('sb-q').textContent    = mo.totalQ;
+  const anyInc = Object.keys(simOpt.incidents).some(k=>Object.keys(simOpt.incidents[k]).length>0);
+  const sbInc  = document.getElementById('sb-inc');
+  if (anyInc) { sbInc.innerHTML = '<span style="color:#f39c12">⚠ Incident active</span>'; }
+  else sbInc.textContent='';
+
+  // Update timing display
+  if (simOpt.intersections.length > 0) {
+    const i0 = simOpt.intersections[0];
+    const nsG = i0.nsGreen.toFixed(0);
+    const ewG = i0.ewGreen.toFixed(0);
+    const cycle = (parseFloat(nsG) + parseFloat(ewG)).toFixed(0);
+    const nsPct = (parseFloat(nsG) / parseFloat(cycle) * 100).toFixed(0);
+    const ewPct = (100 - parseFloat(nsPct)).toFixed(0);
+    document.getElementById('timing-ns').innerHTML = `NS Green: <b style="color:#2ecc71">${nsG}s</b>`;
+    document.getElementById('timing-ew').innerHTML = `EW Green: <b style="color:#2ecc71">${ewG}s</b>`;
+    document.getElementById('timing-cycle').innerHTML = `Cycle: <b>${cycle}s</b>`;
+    document.getElementById('timing-split').innerHTML = `Split: <b style="color:#72c88b">${nsPct}% / ${ewPct}%</b>`;
+  }
+
+  // Update "What's Happening" panel
+  updateWhatsHappening(mb, mo, imp);
+}
+
+function updateWhatsHappening(mb, mo, imp) {
+  const scenario = document.getElementById('scenario-sel').value;
+  const hour = Math.floor((cfg.hour*3600 + step) % 86400 / 3600);
+  const el = document.getElementById('whats-happening');
+  let html = '';
+
+  if (step === 0) {
+    html = `<div>Press <b>▶ Start</b> to begin simulation</div>`;
+  } else if (step < 30) {
+    html = `
+      <div style="color:#f39c12">🚀 <b>Starting up...</b></div>
+      <div>Both controllers beginning with same demand. Queue differences will emerge soon.</div>
+    `;
+  } else {
+    // Current state analysis
+    const queueDiff = mb.totalQ - mo.totalQ;
+    const waitDiff = mb.avgWait - mo.avgWait;
+
+    // Time context
+    const timeContext = hour >= 7 && hour <= 9 ?
+      `<div style="color:#ff6b6b">🌅 <b>AM Rush Hour</b> — NS demand is 3-4× higher than EW</div>` :
+      hour >= 16 && hour <= 19 ?
+      `<div style="color:#f39c12">🌆 <b>PM Rush Hour</b> — EW demand is 2-3× higher than NS</div>` :
+      hour >= 22 || hour <= 5 ?
+      `<div style="color:#9b59b6">🌙 <b>Night</b> — Low traffic, short cycles help</div>` :
+      `<div style="color:#3498db">☀️ <b>Midday</b> — Moderate symmetric traffic</div>`;
+
+    // Performance insight
+    let perfInsight = '';
+    if (imp >= 40) {
+      perfInsight = `<div style="color:#2ecc71">🏆 <b>Excellent!</b> ${imp.toFixed(0)}% improvement — Webster is heavily outperforming fixed timing</div>`;
+    } else if (imp >= 20) {
+      perfInsight = `<div style="color:#2ecc71">✓ <b>Target met!</b> ${imp.toFixed(0)}% improvement exceeds 20% goal</div>`;
+    } else if (imp >= 10) {
+      perfInsight = `<div style="color:#f39c12">📈 <b>Improving...</b> ${imp.toFixed(0)}% — approaching target</div>`;
+    } else {
+      perfInsight = `<div style="color:#888">⏳ <b>Warming up</b> — differences building</div>`;
+    }
+
+    // Queue insight
+    let queueInsight = queueDiff > 5 ?
+      `<div>📊 Baseline has <b style="color:#e74c3c">${queueDiff}</b> more vehicles queued</div>` :
+      queueDiff < -5 ?
+      `<div>📊 Optimiser has <b style="color:#e74c3c">${-queueDiff}</b> more vehicles queued</div>` :
+      `<div>📊 Queue lengths are similar (±${Math.abs(queueDiff)})</div>`;
+
+    // Incident handling
+    const anyInc = Object.keys(simOpt.incidents).some(k=>Object.keys(simOpt.incidents[k]).length>0);
+    let incInsight = anyInc ?
+      `<div style="color:#f39c12">⚠️ <b>Incident active</b> — Webster adapts green splits to account for reduced capacity</div>` : '';
+
+    // Scenario-specific
+    if (scenario === 'incident' && step >= 150 && step < 240) {
+      incInsight = `<div style="color:#f39c12">⚠️ <b>Incident at t=150s!</b> North approach blocked. Watch how optimizer reallocates green time.</div>`;
+    } else if (scenario === 'incident' && step >= 240 && step < 300) {
+      incInsight = `<div style="color:#2ecc71">✓ <b>Incident cleared at t=240s</b> — System recovering to normal operation</div>`;
+    }
+
+    html = timeContext + perfInsight + queueInsight + incInsight;
+  }
+
+  el.innerHTML = html;
+}
+
+// Update scenario info when changed
+document.getElementById('scenario-sel').addEventListener('change', function() {
+  const info = {
+    am_rush: '<b>AM Rush:</b> NS demand is 4× higher than EW. Watch Webster give ~80% green to NS.',
+    full_day: '<b>Full Day:</b> Cycles through night → AM rush → midday → PM rush. Watch timing adapt.',
+    incident: '<b>Incident:</b> At t=150s, north approach blocks 85%. At t=240s, road clears. Watch recovery.'
+  };
+  document.getElementById('scenario-info').innerHTML = info[this.value] || '';
+});
+
+function render() {
+  if (!simBase || !simOpt) return;
+  drawGrid(simOpt);
+  drawChart('chart-wait',  histBase.wait,  histOpt.wait,  'Baseline','Optimised','Avg Wait Time (s)');
+  drawChart('chart-queue', histBase.queue, histOpt.queue, 'Baseline','Optimised','Total Queue');
+  drawChart('chart-thru',  histBase.thru,  histOpt.thru,  'Baseline','Optimised','Throughput (veh/s)');
+  updateKPIs();
+}
+
+// ══════════════════════════════════════════════════════════
+//  ANIMATION LOOP
+// ══════════════════════════════════════════════════════════
+
+let lastFrame = 0;
+function loop(ts) {
+  if (running) {
+    if (ts - lastFrame > 80) {  // ~12 fps
+      const speed = parseInt(document.getElementById('speed-sl').value);
+      advanceSim(speed);
+      render();
+      lastFrame = ts;
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+// ══════════════════════════════════════════════════════════
+//  EVENT WIRING
+// ══════════════════════════════════════════════════════════
+
+document.getElementById('start-btn').onclick = () => { running = true; };
+document.getElementById('pause-btn').onclick = () => { running = false; };
+document.getElementById('reset-btn').onclick = () => { running=false; initSim(); };
+document.getElementById('scenario-sel').onchange = () => { running=false; initSim(); };
+document.getElementById('speed-sl').oninput = function() {
+  document.getElementById('speed-lbl').textContent = this.value;
+};
+document.getElementById('cap-sl').oninput = function() {
+  document.getElementById('cap-lbl').textContent = this.value;
+};
+document.getElementById('trig-btn').onclick = () => {
+  const i   = parseInt(document.getElementById('inc-int').value);
+  const dir = document.getElementById('inc-dir').value;
+  const cap = parseInt(document.getElementById('cap-sl').value)/100;
+  if (simBase && simOpt) {
+    simBase.triggerIncident(i,dir,cap);
+    simOpt.triggerIncident(i,dir,cap);
+    document.getElementById('inc-status').textContent =
+      `⚠ Incident: ${dir} at int ${i} (${Math.round(cap*100)}% capacity)`;
+  }
+};
+document.getElementById('clr-btn').onclick = () => {
+  const i   = parseInt(document.getElementById('inc-int').value);
+  const dir = document.getElementById('inc-dir').value;
+  if (simBase && simOpt) {
+    simBase.clearIncident(i,dir);
+    simOpt.clearIncident(i,dir);
+    document.getElementById('inc-status').textContent = `✓ Cleared: ${dir} at int ${i}`;
+  }
+};
+window.addEventListener('resize', () => { resizeGridCanvas(); render(); });
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+
+resizeGridCanvas();
+initSim();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
