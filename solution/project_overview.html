@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Traffic Light Optimization — Project Overview</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --dark: #1e293b;
+      --light: #f8fafc;
+      --gray: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--light); color: var(--dark); line-height: 1.6; }
+
+    /* Header */
+    header { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); color: white; padding: 40px 20px; text-align: center; }
+    header h1 { font-size: 2.2em; margin-bottom: 8px; }
+    header p { opacity: 0.8; font-size: 1.1em; }
+    .badge { display: inline-block; background: var(--success); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; margin: 8px 4px; }
+    .badge.warn { background: var(--warning); }
+
+    /* Container */
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    /* Sections */
+    section { background: white; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    section h2 { color: var(--primary); font-size: 1.5em; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
+    section h3 { color: var(--dark); font-size: 1.15em; margin: 20px 0 10px; }
+
+    /* Architecture Flow */
+    .arch-flow { display: flex; align-items: stretch; gap: 0; margin: 24px 0; overflow-x: auto; }
+    .arch-step { flex: 1; min-width: 180px; padding: 20px 16px; text-align: center; position: relative; }
+    .arch-step:not(:last-child)::after {
+      content: '→'; position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+      font-size: 24px; color: var(--gray); z-index: 1;
+    }
+    .arch-step .num { width: 36px; height: 36px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin: 0 auto 10px; }
+    .arch-step .title { font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+    .arch-step .desc { font-size: 0.85em; color: var(--gray); }
+    .arch-step.ml { background: #dbeafe; border-radius: 8px; }
+    .arch-step.opt { background: #dcfce7; border-radius: 8px; }
+    .arch-step.sim { background: #fef3c7; border-radius: 8px; }
+    .arch-step.viz { background: #f3e8ff; border-radius: 8px; }
+
+    /* Swimlane Diagram */
+    .swimlane { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 20px 0; }
+    .swim-row { display: flex; border-bottom: 1px solid #e2e8f0; }
+    .swim-row:last-child { border-bottom: none; }
+    .swim-label { width: 140px; background: #f1f5f9; padding: 12px; font-weight: 600; font-size: 0.9em; display: flex; align-items: center; border-right: 1px solid #e2e8f0; }
+    .swim-content { flex: 1; padding: 12px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .swim-box { background: #e0f2fe; border: 1px solid #0ea5e9; border-radius: 6px; padding: 8px 12px; font-size: 0.85em; }
+    .swim-box.green { background: #dcfce7; border-color: #22c55e; }
+    .swim-box.yellow { background: #fef3c7; border-color: #f59e0b; }
+    .swim-box.purple { background: #f3e8ff; border-color: #a855f7; }
+    .swim-arrow { color: var(--gray); font-size: 1.2em; }
+
+    /* Data Sample Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin: 16px 0; }
+    .data-table th, .data-table td { padding: 10px 12px; text-align: left; border: 1px solid #e2e8f0; }
+    .data-table th { background: #f8fafc; font-weight: 600; color: var(--dark); }
+    .data-table tr:nth-child(even) { background: #f8fafc; }
+    .data-table code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+
+    /* Metrics Cards */
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 20px 0; }
+    .metric-card { background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-radius: 10px; padding: 20px; text-align: center; }
+    .metric-card .value { font-size: 2em; font-weight: 700; color: var(--primary); }
+    .metric-card .label { font-size: 0.9em; color: var(--gray); margin-top: 4px; }
+    .metric-card.success .value { color: var(--success); }
+    .metric-card.warn .value { color: var(--warning); }
+
+    /* Comparison Table */
+    .compare-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    .compare-table th, .compare-table td { padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
+    .compare-table th { background: var(--dark); color: white; }
+    .compare-table .best { background: #dcfce7; font-weight: 700; }
+    .compare-table .fail { background: #fee2e2; }
+    .compare-table .pass { background: #dcfce7; }
+
+    /* Code Block */
+    .code-block { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 0.85em; overflow-x: auto; margin: 12px 0; }
+    .code-block .comment { color: #64748b; }
+    .code-block .keyword { color: #38bdf8; }
+    .code-block .string { color: #4ade80; }
+    .code-block .number { color: #f59e0b; }
+
+    /* Formula Box */
+    .formula-box { background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px; padding: 20px; margin: 16px 0; text-align: center; }
+    .formula-box .formula { font-size: 1.4em; font-family: 'Times New Roman', serif; font-style: italic; margin: 10px 0; }
+    .formula-box .explain { font-size: 0.9em; color: var(--gray); }
+
+    /* Feature List */
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+    .feature-item { background: #f8fafc; border-radius: 6px; padding: 10px 14px; font-size: 0.85em; border-left: 3px solid var(--primary); }
+    .feature-item.high { border-color: var(--success); }
+    .feature-item.med { border-color: var(--warning); }
+    .feature-item.low { border-color: var(--gray); }
+    .feature-item .name { font-weight: 600; }
+    .feature-item .imp { float: right; color: var(--gray); }
+
+    /* Footer */
+    footer { text-align: center; padding: 30px; color: var(--gray); font-size: 0.9em; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .arch-flow { flex-direction: column; }
+      .arch-step:not(:last-child)::after { content: '↓'; right: 50%; top: auto; bottom: -20px; transform: translateX(50%); }
+      .feature-grid { grid-template-columns: 1fr; }
+      .swim-row { flex-direction: column; }
+      .swim-label { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Smart Traffic Light Optimization</h1>
+  <p>ML-Powered Adaptive Signal Control System</p>
+  <div>
+    <span class="badge">40.1% Wait Time Reduction</span>
+    <span class="badge">R² = 0.9852</span>
+    <span class="badge">4 Intersections</span>
+    <span class="badge warn">Target: ≥20%</span>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- EXECUTIVE SUMMARY -->
+<section>
+  <h2>Executive Summary</h2>
+  <p>This project implements an intelligent traffic management system that <strong>reduces average vehicle wait time by 40%</strong> compared to fixed-timing traffic lights. The solution combines machine learning for demand prediction with Webster's optimal cycle formula for real-time signal timing.</p>
+  <p style="font-size: 0.85em; color: var(--gray); margin-top: -4px;"><em>Note: Metrics below are from synthetic traffic data with deterministic patterns. See <a href="#overfitting" style="color: var(--warning);">Overfitting Consideration</a> for real-world caveats.</em></p>
+
+  <div class="metrics-grid">
+    <div class="metric-card success">
+      <div class="value">40.1%</div>
+      <div class="label">Wait Time Reduction</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">0.9852</div>
+      <div class="label">Model R² Score</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">0.00545</div>
+      <div class="label">MAE (veh/s)</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">0.94</div>
+      <div class="label">Gini Coefficient</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">0.97</div>
+      <div class="label">ROC-AUC (High Demand)</div>
+    </div>
+    <div class="metric-card warn">
+      <div class="value">60s</div>
+      <div class="label">Update Interval</div>
+    </div>
+  </div>
+
+  <h3>Model Validation Metrics Explained</h3>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Value</th>
+        <th>Meaning</th>
+        <th>Why It Matters</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Gini Coefficient</strong></td>
+        <td>0.94</td>
+        <td>Ranking quality score (0 = random, 1 = perfect)</td>
+        <td>Model correctly orders 94% of pairwise demand comparisons — critical for prioritizing green time</td>
+      </tr>
+      <tr>
+        <td><strong>ROC-AUC</strong></td>
+        <td>0.97</td>
+        <td>High-demand discrimination (top 20% detection)</td>
+        <td>Model reliably flags high-demand approaches for priority green allocation</td>
+      </tr>
+      <tr>
+        <td><strong>SHAP Top Feature</strong></td>
+        <td>hour_sin</td>
+        <td>Most impactful feature via Shapley values</td>
+        <td>Cyclical hour encoding captures rush hour patterns better than raw hour</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ARCHITECTURE FLOW -->
+<section>
+  <h2>System Architecture</h2>
+  <p>The system follows a four-stage pipeline from raw data to optimized signal timings:</p>
+
+  <div class="arch-flow">
+    <div class="arch-step ml">
+      <div class="num">1</div>
+      <div class="title">ML Prediction</div>
+      <div class="desc">LightGBM predicts arrival rates from time, weather, location</div>
+    </div>
+    <div class="arch-step opt">
+      <div class="num">2</div>
+      <div class="title">Optimization</div>
+      <div class="desc">Webster formula computes optimal green splits</div>
+    </div>
+    <div class="arch-step sim">
+      <div class="num">3</div>
+      <div class="title">Simulation</div>
+      <div class="desc">Queue-based physics validates improvements</div>
+    </div>
+    <div class="arch-step viz">
+      <div class="num">4</div>
+      <div class="title">Visualization</div>
+      <div class="desc">Real-time dashboard shows baseline vs optimized</div>
+    </div>
+  </div>
+</section>
+
+<!-- SWIMLANE DIAGRAM -->
+<section>
+  <h2>Code Flow — Swimlane Diagram</h2>
+  <p>How data flows through the system components:</p>
+
+  <div class="swimlane">
+    <div class="swim-row">
+      <div class="swim-label">Data Layer</div>
+      <div class="swim-content">
+        <div class="swim-box">ml_model.py<br><small>build_training_data()</small></div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box">30 days × 24 hours<br>× 4 intersections × 4 dirs</div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box">11,520 training rows</div>
+      </div>
+    </div>
+    <div class="swim-row">
+      <div class="swim-label">ML Layer</div>
+      <div class="swim-content">
+        <div class="swim-box green">Feature Engineering<br><small>12 features</small></div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box green">LightGBM<br><small>train/test split</small></div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box green">predict_demand()<br><small>→ rates per direction</small></div>
+      </div>
+    </div>
+    <div class="swim-row">
+      <div class="swim-label">Optimization Layer</div>
+      <div class="swim-content">
+        <div class="swim-box yellow">ML rates + Queue lengths</div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box yellow">WebsterOptimizer<br><small>70% ML + 30% queue</small></div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box yellow">{ns_green, ew_green}<br><small>per intersection</small></div>
+      </div>
+    </div>
+    <div class="swim-row">
+      <div class="swim-label">Simulation Layer</div>
+      <div class="swim-content">
+        <div class="swim-box purple">TrafficSimulator<br><small>Poisson arrivals</small></div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box purple">Queue discharge<br><small>0.5 veh/s saturation</small></div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box purple">Metrics<br><small>wait time, throughput</small></div>
+      </div>
+    </div>
+    <div class="swim-row">
+      <div class="swim-label" style="background:#fef3c7;color:#92400e;">Incident Layer</div>
+      <div class="swim-content">
+        <div class="swim-box" style="background:#fef3c7;border-color:#f59e0b;">triggerIncident()<br><small>lane blockage event</small></div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box" style="background:#fef3c7;border-color:#f59e0b;">Capacity reduction<br><small>e.g., 15% of normal</small></div>
+        <span class="swim-arrow">→</span>
+        <div class="swim-box" style="background:#fef3c7;border-color:#f59e0b;">Queue feedback spike<br><small>→ optimizer reacts</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE ENGINEERING DETAIL -->
+  <h3 style="margin-top:24px;">Feature Engineering Pipeline</h3>
+  <p>Raw inputs are transformed into ML-ready features:</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:16px 0;">
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;">
+      <strong style="color:#166534;">Temporal Features</strong>
+      <ul style="margin:8px 0 0 16px;font-size:0.9em;line-height:1.6;">
+        <li><code>hour_sin</code> = sin(2π × hour/24)</li>
+        <li><code>hour_cos</code> = cos(2π × hour/24)</li>
+        <li><code>is_peak_am</code> = hour ∈ [7,9]</li>
+        <li><code>is_peak_pm</code> = hour ∈ [16,18]</li>
+        <li><code>is_weekend</code> = dow ≥ 5</li>
+      </ul>
+      <div style="font-size:0.8em;color:#166534;margin-top:8px;">
+        <em>Why circular?</em> Hour 23 and 0 are adjacent, not maximally different.
+      </div>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:14px;">
+      <strong style="color:#1e40af;">Spatial Features</strong>
+      <ul style="margin:8px 0 0 16px;font-size:0.9em;line-height:1.6;">
+        <li><code>intersection_id</code> = 0,1,2,3</li>
+        <li><code>direction_id</code> = N,S,E,W encoded</li>
+        <li><code>ns_direction</code> = is N or S?</li>
+      </ul>
+      <div style="font-size:0.8em;color:#1e40af;margin-top:8px;">
+        <em>Why ns_direction?</em> Commuter patterns differ NS vs EW.
+      </div>
+    </div>
+    <div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px;">
+      <strong style="color:#854d0e;">Interaction Features</strong>
+      <ul style="margin:8px 0 0 16px;font-size:0.9em;line-height:1.6;">
+        <li><code>hour × is_weekend</code></li>
+        <li><code>peak × direction</code></li>
+        <li><code>weather</code> = 0,1,2</li>
+      </ul>
+      <div style="font-size:0.8em;color:#854d0e;margin-top:8px;">
+        <em>Why interactions?</em> Weekend rush differs from weekday.
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTIMIZATION MECHANICS -->
+  <h3>Optimization Mechanics — Step by Step</h3>
+  <p>How Webster's formula computes optimal green splits:</p>
+
+  <div style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:20px;font-family:monospace;font-size:0.85em;margin:16px 0;overflow-x:auto;">
+<span style="color:#64748b;"># Step 1: Blend ML prediction with queue feedback</span>
+ns_pred = max(ml_rates['north'], ml_rates['south'])  <span style="color:#64748b;"># e.g., 0.42 veh/s</span>
+ew_pred = max(ml_rates['east'], ml_rates['west'])    <span style="color:#64748b;"># e.g., 0.08 veh/s</span>
+
+ns_queue = (queue['north'] + queue['south']) / 20 * 0.5  <span style="color:#64748b;"># normalize</span>
+ew_queue = (queue['east'] + queue['west']) / 20 * 0.5
+
+<span style="color:#4ade80;">ns_demand = 0.7 * ns_pred + 0.3 * ns_queue</span>  <span style="color:#64748b;"># blended signal</span>
+<span style="color:#4ade80;">ew_demand = 0.7 * ew_pred + 0.3 * ew_queue</span>
+
+<span style="color:#64748b;"># Step 2: Calculate flow ratios (demand / saturation)</span>
+y_ns = ns_demand / 0.5  <span style="color:#64748b;"># saturation = 0.5 veh/s</span>
+y_ew = ew_demand / 0.5
+Y = min(y_ns + y_ew, 0.97)  <span style="color:#64748b;"># cap to prevent division issues</span>
+
+<span style="color:#64748b;"># Step 3: Webster's optimal cycle formula</span>
+L = 4  <span style="color:#64748b;"># lost time per cycle (startup delay)</span>
+<span style="color:#38bdf8;">C_optimal = (1.5 * L + 5) / (1 - Y)</span>  <span style="color:#64748b;"># e.g., 60 seconds</span>
+C = clamp(C_optimal, MIN_CYCLE=24, MAX_CYCLE=120)
+
+<span style="color:#64748b;"># Step 4: Allocate green time proportionally</span>
+effective = C - L  <span style="color:#64748b;"># usable green time</span>
+<span style="color:#f59e0b;">ns_green = effective * (y_ns / Y)</span>  <span style="color:#64748b;"># e.g., 45 seconds</span>
+<span style="color:#f59e0b;">ew_green = effective * (y_ew / Y)</span>  <span style="color:#64748b;"># e.g., 11 seconds</span>
+
+<span style="color:#64748b;"># Step 5: Enforce safety constraints</span>
+ns_green = max(ns_green, MIN_GREEN=10)  <span style="color:#64748b;"># pedestrian safety</span>
+ew_green = max(ew_green, MIN_GREEN=10)
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0;">
+    <div style="background:#f8fafc;border-radius:6px;padding:12px;text-align:center;border:1px solid #e2e8f0;">
+      <div style="font-size:1.4em;font-weight:700;color:#2563eb;">L = 4s</div>
+      <div style="font-size:0.8em;color:#64748b;">Lost time<br>(yellow + startup)</div>
+    </div>
+    <div style="background:#f8fafc;border-radius:6px;padding:12px;text-align:center;border:1px solid #e2e8f0;">
+      <div style="font-size:1.4em;font-weight:700;color:#16a34a;">0.5 veh/s</div>
+      <div style="font-size:0.8em;color:#64748b;">Saturation rate<br>(max throughput)</div>
+    </div>
+    <div style="background:#f8fafc;border-radius:6px;padding:12px;text-align:center;border:1px solid #e2e8f0;">
+      <div style="font-size:1.4em;font-weight:700;color:#d97706;">10s min</div>
+      <div style="font-size:0.8em;color:#64748b;">Minimum green<br>(pedestrian safety)</div>
+    </div>
+    <div style="background:#f8fafc;border-radius:6px;padding:12px;text-align:center;border:1px solid #e2e8f0;">
+      <div style="font-size:1.4em;font-weight:700;color:#dc2626;">120s max</div>
+      <div style="font-size:0.8em;color:#64748b;">Maximum cycle<br>(driver patience)</div>
+    </div>
+  </div>
+
+  <!-- INCIDENT HANDLING -->
+  <h3>Incident Handling Flow</h3>
+  <p>How the system adapts to lane blockages (accidents, construction):</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:16px 0;">
+    <div style="background:linear-gradient(135deg,#fef3c7,#fef9c3);border:1px solid #fbbf24;border-radius:8px;padding:16px;">
+      <strong style="color:#92400e;">1. Incident Triggered</strong>
+      <div style="font-size:0.9em;margin-top:8px;line-height:1.6;">
+        <code>triggerIncident(intersection=0, dir='north', capacity=0.15)</code>
+        <ul style="margin:8px 0 0 16px;">
+          <li>Lane capacity reduced to 15%</li>
+          <li>Arrival rate multiplied by capacity factor</li>
+          <li>Queue builds faster on blocked direction</li>
+        </ul>
+      </div>
+    </div>
+    <div style="background:linear-gradient(135deg,#dcfce7,#f0fdf4);border:1px solid #86efac;border-radius:8px;padding:16px;">
+      <strong style="color:#166534;">2. System Response</strong>
+      <div style="font-size:0.9em;margin-top:8px;line-height:1.6;">
+        <ul style="margin:0 0 0 16px;">
+          <li><strong>ML:</strong> Still predicts normal demand (no incident data)</li>
+          <li><strong>Queue feedback (30%):</strong> Detects spike immediately</li>
+          <li><strong>Optimizer:</strong> Increases green time for blocked direction</li>
+          <li><strong>Result:</strong> 36.6% improvement vs baseline during incident</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:12px;margin-top:12px;">
+    <strong style="color:#991b1b;">Why 30% queue feedback matters:</strong>
+    <span style="font-size:0.9em;">The ML model was trained on normal traffic patterns — it can't predict accidents. The 30% queue weight lets the system react to unexpected events that ML hasn't seen. This is why Pure ML (100%) performs worse than hybrid during incidents.</span>
+  </div>
+
+  <!-- SIMULATION PHYSICS -->
+  <h3>Simulation Physics</h3>
+  <p>How vehicles are modeled in TrafficSimulator:</p>
+
+  <table class="data-table" style="margin:16px 0;">
+    <thead>
+      <tr><th>Component</th><th>Model</th><th>Parameters</th><th>Rationale</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Arrivals</strong></td>
+        <td>Poisson process</td>
+        <td>λ = predicted rate × dt</td>
+        <td>Standard traffic flow model; memoryless arrivals</td>
+      </tr>
+      <tr>
+        <td><strong>Queue discharge</strong></td>
+        <td>Deterministic + random</td>
+        <td>min(queue, 0.5 × dt + rand)</td>
+        <td>Saturation flow = 0.5 veh/s with some variability</td>
+      </tr>
+      <tr>
+        <td><strong>Wait time</strong></td>
+        <td>Cumulative</td>
+        <td>+1s per step in queue</td>
+        <td>FIFO queue; first arrived = first served</td>
+      </tr>
+      <tr>
+        <td><strong>Light phases</strong></td>
+        <td>Two-phase</td>
+        <td>NS green ↔ EW green</td>
+        <td>Simplified; no turn phases or pedestrian phases</td>
+      </tr>
+      <tr>
+        <td><strong>Update frequency</strong></td>
+        <td>Every 60 seconds</td>
+        <td>Timings recomputed</td>
+        <td>Balance responsiveness vs stability</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="background:#f0f9ff;border-left:4px solid #0ea5e9;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;">
+    <strong>Steady-State Assumption:</strong> Each intersection is modeled independently — vehicles depart but don't travel to adjacent intersections. This simplifies the model while capturing core optimization dynamics. For network effects, you'd need Cell Transmission Model (CTM) or SUMO.
+  </div>
+</section>
+
+<!-- DATA SAMPLE -->
+<section>
+  <h2>Sample Data — Business Context</h2>
+  <p>Each row represents one hour of traffic at one intersection approach:</p>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>hour</th>
+        <th>day_of_week</th>
+        <th>intersection_id</th>
+        <th>direction</th>
+        <th>weather</th>
+        <th>arrival_rate</th>
+        <th>Business Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>8</td>
+        <td>0 (Mon)</td>
+        <td>0</td>
+        <td>north</td>
+        <td>0 (clear)</td>
+        <td><code>0.42</code></td>
+        <td>Peak AM rush: 0.42 vehicles/sec arriving</td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>0 (Mon)</td>
+        <td>0</td>
+        <td>east</td>
+        <td>0 (clear)</td>
+        <td><code>0.08</code></td>
+        <td>Low EW demand: only 0.08 veh/s</td>
+      </tr>
+      <tr>
+        <td>14</td>
+        <td>0 (Mon)</td>
+        <td>0</td>
+        <td>north</td>
+        <td>0 (clear)</td>
+        <td><code>0.06</code></td>
+        <td>Midday lull: symmetric low traffic</td>
+      </tr>
+      <tr>
+        <td>17</td>
+        <td>0 (Mon)</td>
+        <td>0</td>
+        <td>west</td>
+        <td>2 (rain)</td>
+        <td><code>0.31</code></td>
+        <td>PM rush + rain: EW dominant</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Key insight:</strong> During 8 AM rush, NS demand is 5× higher than EW (0.42 vs 0.08). Fixed 50/50 timing wastes half the cycle on low-demand EW. Webster adapts to ~80/20 split.</p>
+</section>
+
+<!-- ML MODELS -->
+<section id="ml-models">
+  <h2>ML Model Comparison</h2>
+
+  <h3>Models Evaluated</h3>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Test MAE</th>
+        <th>R² Score</th>
+        <th>Train Time</th>
+        <th>Wait Reduction</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="best">
+        <td><strong>LightGBM ★</strong></td>
+        <td>0.00545</td>
+        <td>0.9852</td>
+        <td>0.3s</td>
+        <td>40.1%</td>
+      </tr>
+      <tr>
+        <td>Random Forest</td>
+        <td>0.00547</td>
+        <td>0.9853</td>
+        <td>2.1s</td>
+        <td>39.8%</td>
+      </tr>
+      <tr>
+        <td>XGBoost</td>
+        <td>0.00574</td>
+        <td>0.9857</td>
+        <td>1.5s</td>
+        <td>38.5%</td>
+      </tr>
+      <tr>
+        <td>Gradient Boost</td>
+        <td>0.00625</td>
+        <td>0.9838</td>
+        <td>3.2s</td>
+        <td>37.2%</td>
+      </tr>
+      <tr class="fail">
+        <td>Ridge Regression</td>
+        <td>0.05278</td>
+        <td>0.2874</td>
+        <td>0.1s</td>
+        <td>12.3%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Feature Engineering (12 Features)</h3>
+  <div class="feature-grid">
+    <div class="feature-item high"><span class="name">hour_sin</span><span class="imp">High</span></div>
+    <div class="feature-item high"><span class="name">hour_cos</span><span class="imp">High</span></div>
+    <div class="feature-item high"><span class="name">is_peak_am</span><span class="imp">High</span></div>
+    <div class="feature-item high"><span class="name">is_peak_pm</span><span class="imp">High</span></div>
+    <div class="feature-item med"><span class="name">day_of_week</span><span class="imp">Med</span></div>
+    <div class="feature-item med"><span class="name">is_weekend</span><span class="imp">Med</span></div>
+    <div class="feature-item med"><span class="name">weather</span><span class="imp">Med</span></div>
+    <div class="feature-item med"><span class="name">intersection_id</span><span class="imp">Med</span></div>
+    <div class="feature-item low"><span class="name">direction_id</span><span class="imp">Low</span></div>
+    <div class="feature-item low"><span class="name">ns_direction</span><span class="imp">Low</span></div>
+    <div class="feature-item low"><span class="name">hour × is_weekend</span><span class="imp">Low</span></div>
+    <div class="feature-item low"><span class="name">peak × direction</span><span class="imp">Low</span></div>
+  </div>
+
+  <h3>Feature Reduction Techniques</h3>
+  <ul style="margin: 12px 0 0 20px;">
+    <li><strong>Circular encoding:</strong> hour → (sin, cos) to capture 23:00→00:00 continuity</li>
+    <li><strong>Binary flags:</strong> is_peak_am, is_peak_pm instead of 24 one-hot hour columns</li>
+    <li><strong>Correlation analysis:</strong> Removed redundant features (r > 0.9)</li>
+    <li><strong>SHAP analysis:</strong> Validated top features match domain intuition</li>
+  </ul>
+</section>
+
+<!-- SHAP ANALYSIS -->
+<section id="shap-analysis">
+  <h2>SHAP Analysis — Model Interpretability</h2>
+  <p>SHAP (SHapley Additive exPlanations) provides rigorous, game-theoretic feature importance that explains <em>how</em> and <em>why</em> the model makes predictions.</p>
+
+  <h3>Why SHAP Over Gini Importance?</h3>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Pros</th>
+        <th>Cons</th>
+        <th>Use Case</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Gini (MDI)</strong></td>
+        <td>Fast, built into trees</td>
+        <td>Biased toward high-cardinality features</td>
+        <td>Quick sanity check</td>
+      </tr>
+      <tr>
+        <td><strong>Permutation</strong></td>
+        <td>Unbiased, model-agnostic</td>
+        <td>Slow, sensitive to correlated features</td>
+        <td>Validate Gini rankings</td>
+      </tr>
+      <tr style="background: #dcfce7;">
+        <td><strong>SHAP ★</strong></td>
+        <td>Theoretically grounded, local+global, directional</td>
+        <td>Computationally expensive</td>
+        <td>Production explanations</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Top SHAP Features (Mean |SHAP Value|)</h3>
+  <div style="display: flex; gap: 20px; margin: 16px 0; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 280px;">
+      <table class="data-table">
+        <thead><tr><th>Rank</th><th>Feature</th><th>Mean |SHAP|</th><th>Direction</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><strong>hour_sin</strong></td><td>0.0425</td><td>↑ AM rush → higher demand</td></tr>
+          <tr><td>2</td><td><strong>hour_cos</strong></td><td>0.0312</td><td>↑ PM rush → higher demand</td></tr>
+          <tr><td>3</td><td><strong>is_peak_am</strong></td><td>0.0287</td><td>+0.15 veh/s when true</td></tr>
+          <tr><td>4</td><td><strong>ns_direction</strong></td><td>0.0198</td><td>NS approaches +25% in AM</td></tr>
+          <tr><td>5</td><td><strong>is_weekend</strong></td><td>0.0156</td><td>−40% demand on weekends</td></tr>
+          <tr><td>6</td><td><strong>intersection_id</strong></td><td>0.0089</td><td>Downtown (ID=0) is busiest</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="flex: 1; min-width: 280px; background: #f0f9ff; border-radius: 8px; padding: 16px;">
+      <h4 style="margin-top: 0; color: #0369a1;">Key SHAP Insights</h4>
+      <ul style="margin: 8px 0 0 16px; line-height: 1.8;">
+        <li><strong>Cyclical encoding works:</strong> hour_sin captures AM peak better than raw hour</li>
+        <li><strong>Direction matters:</strong> NS vs EW flag captures commuter asymmetry</li>
+        <li><strong>Weekend effect:</strong> Model correctly deprioritizes weekend predictions</li>
+        <li><strong>No data leakage:</strong> SHAP confirms no target-correlated proxies</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>SHAP Waterfall — Single Prediction Explained</h3>
+  <div class="code-block">
+<span class="comment"># Example: Monday 8AM, North approach, Intersection 0</span>
+Base value (avg demand):  <span class="number">0.085</span> veh/s
+
+<span class="keyword">+ hour_sin</span>        → <span class="number">+0.142</span>  (AM rush pushes up)
+<span class="keyword">+ is_peak_am</span>      → <span class="number">+0.089</span>  (peak flag confirms)
+<span class="keyword">+ ns_direction</span>    → <span class="number">+0.056</span>  (north-south bonus)
+<span class="keyword">+ intersection_id</span> → <span class="number">+0.023</span>  (downtown busier)
+<span class="keyword">- is_weekend</span>      → <span class="number">-0.000</span>  (not weekend)
+<span class="keyword">- weather</span>         → <span class="number">-0.008</span>  (clear day, slight minus)
+─────────────────────────────────────
+<span class="string">Final prediction:   0.387 veh/s</span>  (actual: 0.42)
+  </div>
+  <p style="font-size: 0.9em; color: var(--gray);">Waterfall shows how each feature pushes prediction from baseline (0.085) to final value (0.387). The model correctly identifies this as a high-demand scenario.</p>
+</section>
+
+<!-- GINI & ROC ANALYSIS -->
+<section>
+  <h2>Gini & ROC-AUC Analysis</h2>
+  <p>Beyond point accuracy (MAE, R²), we validate ranking quality and high-demand discrimination — metrics that directly impact optimization effectiveness.</p>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin: 20px 0;">
+
+    <!-- Gini Card -->
+    <div style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 12px; padding: 20px; border: 1px solid #86efac;">
+      <h3 style="margin-top: 0; color: #166534; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.5em;">📊</span> Gini Coefficient = 0.94
+      </h3>
+      <p style="font-size: 0.9em; margin: 12px 0;"><strong>What it measures:</strong> Ranking quality — does the model correctly order high vs low demand scenarios?</p>
+      <div style="background: white; border-radius: 8px; padding: 12px; margin: 12px 0;">
+        <div style="font-family: monospace; font-size: 0.85em;">
+          Gini = 0.00 → Random guess (no skill)<br>
+          Gini = 0.50 → Moderate ranking<br>
+          <strong style="color: #166534;">Gini = 0.94 → Excellent (our model)</strong><br>
+          Gini = 1.00 → Perfect ranking
+        </div>
+      </div>
+      <p style="font-size: 0.85em; color: #166534;"><strong>Impact:</strong> Model correctly ranks 94% of demand comparisons, ensuring Webster allocates green time to the right direction.</p>
+    </div>
+
+    <!-- ROC-AUC Card -->
+    <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-radius: 12px; padding: 20px; border: 1px solid #93c5fd;">
+      <h3 style="margin-top: 0; color: #1e40af; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.5em;">🎯</span> ROC-AUC = 0.97
+      </h3>
+      <p style="font-size: 0.9em; margin: 12px 0;"><strong>What it measures:</strong> High-demand discrimination — can the model identify rush hour spikes?</p>
+      <div style="background: white; border-radius: 8px; padding: 12px; margin: 12px 0;">
+        <div style="font-family: monospace; font-size: 0.85em;">
+          Threshold: top 20% of demand = "high demand"<br>
+          True Positive Rate @ 10% FPR: 92%<br>
+          <strong style="color: #1e40af;">AUC = 0.97 (near-perfect)</strong>
+        </div>
+      </div>
+      <p style="font-size: 0.85em; color: #1e40af;"><strong>Impact:</strong> Model reliably flags high-demand approaches, triggering proactive green time allocation before queues build.</p>
+    </div>
+
+  </div>
+
+  <h3>Relationship: Gini ↔ AUC</h3>
+  <div class="formula-box" style="background: #fefce8; border-color: #facc15;">
+    <div class="formula">AUC = (Gini + 1) / 2</div>
+    <div class="explain">
+      Gini = 0.94 → AUC = (0.94 + 1) / 2 = <strong>0.97</strong> ✓
+    </div>
+  </div>
+
+  <h3>Why These Metrics Matter for Traffic Optimization</h3>
+  <table class="data-table">
+    <thead>
+      <tr><th>Scenario</th><th>What Could Go Wrong</th><th>How Gini/AUC Prevents It</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>AM Rush (NS heavy)</td>
+        <td>Model predicts similar demand for NS and EW</td>
+        <td>High Gini ensures NS ranked above EW → correct green split</td>
+      </tr>
+      <tr>
+        <td>Sudden demand spike</td>
+        <td>Model underestimates spike magnitude</td>
+        <td>High ROC-AUC ensures spike is flagged as "high demand" → fast response</td>
+      </tr>
+      <tr>
+        <td>Weekend vs weekday</td>
+        <td>Model confuses weekend with weekday patterns</td>
+        <td>Gini validates weekend ranked lower → shorter cycles appropriate</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="overfitting" style="color: #b45309;">⚠️ Overfitting Consideration</h3>
+  <div style="background: linear-gradient(135deg, #fefce8, #fef3c7); border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; margin: 16px 0;">
+    <p style="margin: 0 0 12px 0;"><strong>Why are metrics so high?</strong> The Gini=0.94 and R²=0.985 scores are unusually high because:</p>
+    <ul style="margin: 0 0 12px 20px; line-height: 1.8;">
+      <li><strong>Synthetic data:</strong> Traffic is generated from explicit mathematical formulas (Gaussian peaks for rush hours)</li>
+      <li><strong>Deterministic patterns:</strong> 8 AM rush, 5 PM rush, weekday/weekend — highly predictable</li>
+      <li><strong>Model learns the generation function:</strong> This is actually correct behavior for synthetic data</li>
+    </ul>
+
+    <p style="margin: 0 0 8px 0;"><strong>Cross-Validation Check (5-fold, no shuffle):</strong></p>
+    <table class="data-table" style="margin: 0; font-size: 0.85em;">
+      <thead><tr><th>Metric</th><th>Train</th><th>Validation</th><th>Gap</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>MAE</td><td>0.0051</td><td>0.0055</td><td>7.8%</td><td style="color: #166534;">✓ Healthy</td></tr>
+        <tr><td>R²</td><td>0.9872</td><td>0.9852</td><td>0.2%</td><td style="color: #166534;">✓ Healthy</td></tr>
+      </tbody>
+    </table>
+    <p style="margin: 12px 0 0 0; font-size: 0.85em; color: #92400e;"><strong>Verdict:</strong> Train/Val gap &lt;10% indicates the model generalizes well within the synthetic data distribution. However, real-world deployment would need validation on actual traffic sensor data with unseen events (accidents, construction, holidays).</p>
+  </div>
+</section>
+
+<!-- OPTIMIZATION LAYER -->
+<section id="optimization">
+  <h2>Optimization Algorithm Comparison</h2>
+
+  <div class="formula-box">
+    <div style="font-weight: 600; color: var(--primary);">Webster's Optimal Cycle Formula (1958)</div>
+    <div class="formula">C* = (1.5L + 5) / (1 − Y)</div>
+    <div class="explain">
+      L = lost time per cycle (4s) &nbsp;|&nbsp; Y = sum of flow ratios (demand/saturation)
+    </div>
+  </div>
+
+  <h3>Algorithm Comparison</h3>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Algorithm</th>
+        <th>Type</th>
+        <th>ML Weight</th>
+        <th>Avg Wait</th>
+        <th>Improvement</th>
+        <th>20% Target</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Fixed 30/30</td>
+        <td>Baseline</td>
+        <td>—</td>
+        <td>7.5s</td>
+        <td>0%</td>
+        <td class="fail">BASELINE</td>
+      </tr>
+      <tr class="best">
+        <td><strong>Webster (70% ML)</strong></td>
+        <td>Hybrid</td>
+        <td>70%</td>
+        <td>4.5s</td>
+        <td>40.1%</td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>Webster (50% ML)</td>
+        <td>Hybrid</td>
+        <td>50%</td>
+        <td>4.8s</td>
+        <td>36.2%</td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>Pure ML</td>
+        <td>Predictive</td>
+        <td>100%</td>
+        <td>4.6s</td>
+        <td>38.7%</td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>Pure Queue</td>
+        <td>Reactive</td>
+        <td>0%</td>
+        <td>5.2s</td>
+        <td>30.7%</td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>Max Pressure</td>
+        <td>Reactive</td>
+        <td>0%</td>
+        <td>5.4s</td>
+        <td>28.0%</td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>Proportional</td>
+        <td>Reactive</td>
+        <td>0%</td>
+        <td>5.1s</td>
+        <td>32.0%</td>
+        <td class="pass">PASS</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Why 70% ML + 30% Queue?</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 12px;">
+    <div style="background: #dbeafe; padding: 16px; border-radius: 8px;">
+      <strong>ML Prediction (70%)</strong>
+      <ul style="margin: 8px 0 0 16px; font-size: 0.9em;">
+        <li>Anticipates demand before queues build</li>
+        <li>Captures time-of-day patterns</li>
+        <li>Accounts for weather effects</li>
+      </ul>
+    </div>
+    <div style="background: #dcfce7; padding: 16px; border-radius: 8px;">
+      <strong>Queue Feedback (30%)</strong>
+      <ul style="margin: 8px 0 0 16px; font-size: 0.9em;">
+        <li>Reacts to unexpected spikes</li>
+        <li>Corrects prediction errors</li>
+        <li>Handles incidents immediately</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>What Does ML Actually Contribute?</h3>
+  <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 2px solid #0ea5e9; border-radius: 10px; padding: 20px; margin: 16px 0;">
+    <p style="margin: 0 0 16px 0; font-size: 1.05em;"><strong>Key Insight:</strong> ML enables <em>prediction</em> while queue feedback enables <em>reaction</em>. The ~10% performance gap between them proves ML's value.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;">
+      <div style="background: white; padding: 14px; border-radius: 8px; border-left: 4px solid #dc2626;">
+        <strong style="color: #dc2626;">Without ML (Pure Queue):</strong>
+        <div style="font-size: 0.9em; margin-top: 8px; font-family: monospace;">
+          7:45 AM → Low queues detected<br>
+          7:50 AM → Still waiting for buildup<br>
+          7:55 AM → Queues growing fast<br>
+          8:00 AM → <em>Finally</em> increases green time<br>
+          <span style="color: #dc2626;">Result: 5+ min delay in response</span>
+        </div>
+      </div>
+      <div style="background: white; padding: 14px; border-radius: 8px; border-left: 4px solid #16a34a;">
+        <strong style="color: #16a34a;">With ML (Hybrid):</strong>
+        <div style="font-size: 0.9em; margin-top: 8px; font-family: monospace;">
+          7:45 AM → ML predicts rush incoming<br>
+          7:46 AM → Pre-allocates NS green time<br>
+          7:50 AM → Cars arrive, green ready<br>
+          8:00 AM → Queues stay minimal<br>
+          <span style="color: #16a34a;">Result: Proactive, no delay</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-top: 12px;">
+      <strong>Benchmark Proof:</strong>
+      <table style="width: 100%; margin-top: 8px; font-size: 0.9em;">
+        <tr>
+          <td style="padding: 4px 8px;">Pure Queue (0% ML):</td>
+          <td style="padding: 4px 8px; font-weight: bold;">30.7% improvement</td>
+          <td style="padding: 4px 8px; color: #64748b;">← Reactive only</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 8px;">Hybrid (70% ML):</td>
+          <td style="padding: 4px 8px; font-weight: bold; color: #16a34a;">40.1% improvement</td>
+          <td style="padding: 4px 8px; color: #64748b;">← Predictive + Reactive</td>
+        </tr>
+        <tr style="background: #fef9c3;">
+          <td style="padding: 4px 8px;"><strong>ML Contribution:</strong></td>
+          <td style="padding: 4px 8px; font-weight: bold; color: #0ea5e9;">+9.4% additional gain</td>
+          <td style="padding: 4px 8px; color: #64748b;">← Value of prediction</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- CODE STRUCTURE -->
+<section id="code-structure">
+  <h2>Code Structure</h2>
+
+  <div class="code-block">
+<span class="comment"># Project Structure</span>
+solution/
+├── main.py              <span class="comment"># Entry point: trains model, runs simulation, generates figures</span>
+├── demo.html            <span class="comment"># Interactive browser visualization</span>
+├── report.html          <span class="comment"># Static analysis report</span>
+├── src/
+│   ├── ml_model.py      <span class="comment"># Feature engineering, model training, predict_demand()</span>
+│   ├── optimizer.py     <span class="comment"># Webster, MaxPressure, Proportional optimizers</span>
+│   ├── simulator.py     <span class="comment"># TrafficSimulator with Poisson arrivals</span>
+│   └── model_validation.py  <span class="comment"># SHAP, residual analysis, cross-validation</span>
+├── figures/             <span class="comment"># 15 PNG figures + 3 GIF animations</span>
+└── models/              <span class="comment"># Saved LightGBM model (best_model.pkl)</span>
+  </div>
+
+  <h3>Key Function Flow</h3>
+  <div class="code-block">
+<span class="comment"># 1. Train ML model</span>
+df = build_training_data(days=<span class="number">30</span>)
+X, y = add_features(df), df[<span class="string">'arrival_rate'</span>]
+model = LGBMRegressor().fit(X_train, y_train)
+
+<span class="comment"># 2. Predict demand for current conditions</span>
+rates = predict_demand(model, hour=<span class="number">8</span>, dow=<span class="number">0</span>, weather=<span class="number">0</span>)
+<span class="comment"># → {0: {north: 0.42, south: 0.38, east: 0.08, west: 0.07}, ...}</span>
+
+<span class="comment"># 3. Compute optimal timings</span>
+optimizer = WebsterOptimizer(ml_weight=<span class="number">0.7</span>)
+timings = optimizer.compute_timings([<span class="number">0,1,2,3</span>], rates, queue_lengths)
+<span class="comment"># → {0: {ns_green: 45, ew_green: 15}, ...}</span>
+
+<span class="comment"># 4. Apply to simulation</span>
+sim.update_lights(timings)
+sim.step(rates)  <span class="comment"># Vehicles spawn, queue, depart</span>
+metrics = sim.get_metrics()  <span class="comment"># → {avg_wait: 4.5, throughput: 0.48}</span>
+  </div>
+</section>
+
+<!-- SCENARIO BENCHMARKS -->
+<section>
+  <h2>Scenario Benchmarks</h2>
+  <p>Performance across different traffic conditions:</p>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Scenario</th>
+        <th>Conditions</th>
+        <th>Baseline Wait</th>
+        <th>Optimized Wait</th>
+        <th>Improvement</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>AM Rush (8am)</td>
+        <td>NS demand 4× EW</td>
+        <td>7.5s</td>
+        <td>4.5s</td>
+        <td>40.1%</td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>PM Rush (5pm)</td>
+        <td>EW demand 2.5× NS</td>
+        <td>6.8s</td>
+        <td>4.2s</td>
+        <td>38.2%</td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>Midday</td>
+        <td>Symmetric low traffic</td>
+        <td>3.2s</td>
+        <td>2.8s</td>
+        <td>12.5%</td>
+        <td class="fail">FAIL</td>
+      </tr>
+      <tr>
+        <td>Weekend</td>
+        <td>Flat midday pattern</td>
+        <td>2.8s</td>
+        <td>2.5s</td>
+        <td>10.7%</td>
+        <td class="fail">FAIL</td>
+      </tr>
+      <tr>
+        <td>Rain (rush)</td>
+        <td>+25% traffic volume</td>
+        <td>9.1s</td>
+        <td>5.2s</td>
+        <td>42.9%</td>
+        <td class="pass">PASS</td>
+      </tr>
+      <tr>
+        <td>Incident</td>
+        <td>85% lane blockage</td>
+        <td>12.3s</td>
+        <td>7.8s</td>
+        <td>36.6%</td>
+        <td class="pass">PASS</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top: 12px;"><strong>Insight:</strong> Optimization excels during asymmetric demand (rush hours, incidents). During symmetric low-traffic periods, fixed timing is already near-optimal—there's less room for improvement.</p>
+</section>
+
+<!-- VISUALIZATIONS -->
+<section id="visualizations">
+  <h2>Available Visualizations</h2>
+  <p>The project generates 15 static figures and 3 animated GIFs:</p>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+    <div style="background: #f1f5f9; padding: 16px; border-radius: 8px;">
+      <strong>Model Analysis</strong>
+      <ul style="margin: 8px 0 0 16px; font-size: 0.9em;">
+        <li>fig_shap_summary.png — Feature importance</li>
+        <li>fig_residual_analysis.png — Error distribution</li>
+        <li>fig_learning_curves.png — Train vs validation</li>
+        <li>fig_correlation_analysis.png — Feature correlations</li>
+      </ul>
+    </div>
+    <div style="background: #f1f5f9; padding: 16px; border-radius: 8px;">
+      <strong>Performance</strong>
+      <ul style="margin: 8px 0 0 16px; font-size: 0.9em;">
+        <li>fig1_time_series.png — Wait time over simulation</li>
+        <li>fig2_model_comparison.png — ML models compared</li>
+        <li>fig3_scenario_benchmark.png — Pass/fail by scenario</li>
+        <li>fig4_feature_importance.png — Tree-based importance</li>
+      </ul>
+    </div>
+    <div style="background: #f1f5f9; padding: 16px; border-radius: 8px;">
+      <strong>Interactive</strong>
+      <ul style="margin: 8px 0 0 16px; font-size: 0.9em;">
+        <li>demo.html — Live side-by-side simulation</li>
+        <li>fig_live_demo_am_rush.gif — AM rush animation</li>
+        <li>fig_live_demo_full_day.gif — 24-hour cycle</li>
+        <li>fig_live_demo_incident.gif — Incident recovery</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- KEY TAKEAWAYS -->
+<section>
+  <h2>Key Takeaways</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+    <div style="background: linear-gradient(135deg, #dcfce7, #bbf7d0); padding: 20px; border-radius: 10px;">
+      <h3 style="color: var(--success); margin-bottom: 8px;">What Works</h3>
+      <ul style="margin-left: 16px;">
+        <li>ML prediction + queue feedback hybrid</li>
+        <li>Webster's proven 1958 formula</li>
+        <li>Rush hour optimization (40%+ gains)</li>
+        <li>Incident adaptation</li>
+      </ul>
+    </div>
+    <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 20px; border-radius: 10px;">
+      <h3 style="color: var(--warning); margin-bottom: 8px;">Limitations</h3>
+      <ul style="margin-left: 16px;">
+        <li>Symmetric traffic: minimal gains</li>
+        <li>Synthetic data (not real sensors)</li>
+        <li>4-intersection demo (not city-scale)</li>
+        <li>No pedestrian modeling</li>
+      </ul>
+    </div>
+    <div style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); padding: 20px; border-radius: 10px;">
+      <h3 style="color: var(--primary); margin-bottom: 8px;">Future Work</h3>
+      <ul style="margin-left: 16px;">
+        <li>Multi-agent RL coordination</li>
+        <li>Real sensor data integration</li>
+        <li>Pedestrian crossing priority</li>
+        <li>Emergency vehicle preemption</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <p>Traffic Light Optimization Case Study | Built with LightGBM + Webster's Formula</p>
+  <p style="margin-top: 4px;">Run <code>python main.py</code> to regenerate all figures and models</p>
+</footer>
+
+</body>
+</html>

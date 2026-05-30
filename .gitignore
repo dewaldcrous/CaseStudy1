@@ -47,5 +47,8 @@ Thumbs.db
 *.log
 *.tmp
 
+# Personal notes (not for submission)
+solution/presenter_guide.html
+
 # Large model files (optional - uncomment if models are too large)
 # models/*.pkl
