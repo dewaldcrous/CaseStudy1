@@ -1127,6 +1127,64 @@ Base value (avg demand):  <span class="number">0.085</span> veh/s
     </tbody>
   </table>
 
+  <!-- Scenario Benchmark Visualization -->
+  <div style="margin: 24px 0;">
+    <img src="figures/fig3_scenario_benchmark.png" alt="Scenario Benchmark Results" style="max-width: 100%; border-radius: 8px; border: 1px solid #e2e8f0;">
+    <p style="font-size: 0.85em; color: #64748b; margin-top: 8px; text-align: center;">Benchmark across different traffic scenarios (AM Rush, PM Rush, Weekend, Incident)</p>
+  </div>
+
+  <h3>How Each Algorithm Works</h3>
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 16px 0;">
+    <!-- Webster -->
+    <div style="background: linear-gradient(135deg, #dbeafe, #eff6ff); padding: 16px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+      <strong style="color: #1e40af;">Webster's Formula</strong>
+      <div style="font-size: 0.85em; margin-top: 8px; color: #334155;">
+        <em>Traffic engineering gold standard (1958)</em>
+        <ul style="margin: 8px 0 0 16px; padding: 0;">
+          <li>Minimizes total delay mathematically</li>
+          <li>Adapts cycle length to demand (Y)</li>
+          <li>Splits green proportionally by flow ratio</li>
+        </ul>
+        <div style="font-family: monospace; font-size: 0.9em; margin-top: 8px; color: #3b82f6;">C* = (1.5L + 5) / (1 − Y)</div>
+      </div>
+    </div>
+    <!-- Max Pressure -->
+    <div style="background: linear-gradient(135deg, #fef3c7, #fffbeb); padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+      <strong style="color: #92400e;">Max Pressure</strong>
+      <div style="font-size: 0.85em; margin-top: 8px; color: #334155;">
+        <em>Queue-based reactive control</em>
+        <ul style="margin: 8px 0 0 16px; padding: 0;">
+          <li>Compares NS vs EW queue pressure</li>
+          <li>Greedy: serves highest queue first</li>
+          <li>No prediction, pure reaction</li>
+        </ul>
+        <div style="font-family: monospace; font-size: 0.9em; margin-top: 8px; color: #f59e0b;">green = argmax(queue_ns, queue_ew)</div>
+      </div>
+    </div>
+    <!-- Proportional -->
+    <div style="background: linear-gradient(135deg, #dcfce7, #f0fdf4); padding: 16px; border-radius: 8px; border-left: 4px solid #22c55e;">
+      <strong style="color: #166534;">Proportional</strong>
+      <div style="font-size: 0.85em; margin-top: 8px; color: #334155;">
+        <em>Simple ratio-based allocation</em>
+        <ul style="margin: 8px 0 0 16px; padding: 0;">
+          <li>Divides green time by queue ratio</li>
+          <li>Fixed cycle, variable split</li>
+          <li>Less aggressive than Max Pressure</li>
+        </ul>
+        <div style="font-family: monospace; font-size: 0.9em; margin-top: 8px; color: #22c55e;">ns_green = C × (q_ns / (q_ns + q_ew))</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+    <strong style="color: #334155;">Why Webster + ML Won:</strong>
+    <ul style="margin: 8px 0 0 16px; font-size: 0.9em; color: #475569;">
+      <li><strong>Max Pressure</strong> reacts to current queues but can't anticipate — causes oscillation during rush hour transitions</li>
+      <li><strong>Proportional</strong> smooths allocation but still purely reactive — same anticipation problem</li>
+      <li><strong>Webster + ML</strong> predicts demand before queues build, then fine-tunes with 30% queue feedback for unexpected events</li>
+    </ul>
+  </div>
+
   <h3>Why 70% ML + 30% Queue?</h3>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 12px;">
     <div style="background: #dbeafe; padding: 16px; border-radius: 8px;">
