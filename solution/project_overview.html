@@ -839,6 +839,71 @@ Base value (avg demand):  <span class="number">0.085</span> veh/s
 <span class="string">Final prediction:   0.387 veh/s</span>  (actual: 0.42)
   </div>
   <p style="font-size: 0.9em; color: var(--gray);">Waterfall shows how each feature pushes prediction from baseline (0.085) to final value (0.387). The model correctly identifies this as a high-demand scenario.</p>
+
+  <!-- SHAP Visualizations -->
+  <h3>SHAP Visualizations</h3>
+  <p>These graphs validate that the model learned <em>meaningful</em> patterns for traffic optimization — not spurious correlations.</p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+    <!-- SHAP Summary Plot -->
+    <div style="background: white; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
+      <h4 style="margin: 0 0 12px 0; color: #1e293b;">SHAP Summary Plot</h4>
+      <img src="figures/fig_shap_summary.png" alt="SHAP Summary Plot" style="width: 100%; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <p style="font-size: 0.85em; color: #64748b; margin: 10px 0 0 0;">
+        <strong>What it shows:</strong> Each dot is a prediction. Position shows SHAP value (impact on output). Color shows feature value (red=high, blue=low).
+        <br><strong>Traffic insight:</strong> High hour_sin (red dots right) = AM rush → higher predicted demand. Model correctly learned time-of-day patterns.
+      </p>
+    </div>
+
+    <!-- SHAP Bar Plot -->
+    <div style="background: white; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
+      <h4 style="margin: 0 0 12px 0; color: #1e293b;">SHAP Feature Importance (Mean |SHAP|)</h4>
+      <img src="figures/fig_shap_bar.png" alt="SHAP Bar Plot" style="width: 100%; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <p style="font-size: 0.85em; color: #64748b; margin: 10px 0 0 0;">
+        <strong>What it shows:</strong> Average absolute SHAP value per feature — how much each feature contributes to predictions.
+        <br><strong>Traffic insight:</strong> Temporal features (hour_sin, is_peak_am) dominate, validating that rush-hour timing is the primary driver of demand variation.
+      </p>
+    </div>
+
+    <!-- SHAP by Hour -->
+    <div style="background: white; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
+      <h4 style="margin: 0 0 12px 0; color: #1e293b;">SHAP Impact by Hour</h4>
+      <img src="figures/fig_shap_by_hour.png" alt="SHAP by Hour" style="width: 100%; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <p style="font-size: 0.85em; color: #64748b; margin: 10px 0 0 0;">
+        <strong>What it shows:</strong> How SHAP values vary across the day for key features.
+        <br><strong>Traffic insight:</strong> hour_sin peaks at 8 AM (morning rush), ns_direction shows asymmetric NS vs EW patterns matching commuter flows.
+      </p>
+    </div>
+
+    <!-- SHAP Waterfall -->
+    <div style="background: white; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
+      <h4 style="margin: 0 0 12px 0; color: #1e293b;">SHAP Waterfall (Single Prediction)</h4>
+      <img src="figures/fig_shap_waterfall.png" alt="SHAP Waterfall" style="width: 100%; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <p style="font-size: 0.85em; color: #64748b; margin: 10px 0 0 0;">
+        <strong>What it shows:</strong> How features push a single prediction from baseline (average) to final value.
+        <br><strong>Traffic insight:</strong> For 8 AM Monday North approach: hour_sin and is_peak_am push demand up, confirming model correctly predicts rush hour spikes.
+      </p>
+    </div>
+  </div>
+
+  <!-- Why SHAP Matters for Traffic Optimization -->
+  <div style="background: linear-gradient(135deg, #fef3c7, #fefce8); border: 2px solid #f59e0b; border-radius: 10px; padding: 20px; margin: 20px 0;">
+    <h4 style="margin: 0 0 12px 0; color: #92400e;">Why SHAP Analysis Matters for Traffic Optimization</h4>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+      <div>
+        <strong style="color: #92400e;">1. Validates Domain Knowledge</strong>
+        <p style="font-size: 0.9em; margin: 8px 0 0 0;">SHAP confirms time-of-day is the dominant factor — matching traffic engineering intuition. If intersection_id ranked #1, we'd suspect data leakage.</p>
+      </div>
+      <div>
+        <strong style="color: #92400e;">2. Explains Optimizer Decisions</strong>
+        <p style="font-size: 0.9em; margin: 8px 0 0 0;">When Webster allocates 80% green to NS at 8 AM, SHAP shows <em>why</em>: the ML model predicted high NS demand due to hour_sin + ns_direction features.</p>
+      </div>
+      <div>
+        <strong style="color: #92400e;">3. Detects Model Weaknesses</strong>
+        <p style="font-size: 0.9em; margin: 8px 0 0 0;">Low SHAP for weather suggests the model learned minimal weather effects — correct for this dataset, but flags where more training data is needed.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- GINI & ROC ANALYSIS -->
