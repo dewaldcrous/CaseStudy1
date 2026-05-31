@@ -42,6 +42,7 @@ Thumbs.db
 
 # IDE/Tool specific
 .kiro/
+.claude/
 
 # Project specific
 *.log
