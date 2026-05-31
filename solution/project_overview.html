@@ -284,155 +284,56 @@
     </div>
   </div>
 
-  <!-- DETAILED CODE FLOW DIAGRAMS -->
-  <h3 style="margin-top:24px;">Code Flow Diagrams — Function-Level Detail</h3>
-  <p>How each layer executes internally, showing loops, conditionals, and data transformations:</p>
-
-  <!-- Data Generation Flow -->
-  <div style="background:linear-gradient(135deg,#e0f2fe,#f0f9ff);border:2px solid #0ea5e9;border-radius:10px;padding:20px;margin:16px 0;">
-    <h4 style="color:#0369a1;margin:0 0 12px 0;">📊 Data Layer: generate_training_data()</h4>
-    <pre style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:16px;font-family:monospace;font-size:0.82em;margin:0;overflow-x:auto;white-space:pre-wrap;"><span style="color:#64748b;"># Entry point: ml_model.py → generate_training_data(days=30)</span>
-
-<span style="color:#38bdf8;">FOR</span> day <span style="color:#38bdf8;">IN</span> range(30):                    <span style="color:#64748b;"># Outer loop: 30 days</span>
-  │
-  └─► <span style="color:#38bdf8;">FOR</span> hour <span style="color:#38bdf8;">IN</span> range(24):              <span style="color:#64748b;"># 24 hours per day</span>
-      │
-      └─► <span style="color:#38bdf8;">FOR</span> intersection <span style="color:#38bdf8;">IN</span> [0,1,2,3]:  <span style="color:#64748b;"># 4 intersections</span>
-          │
-          └─► <span style="color:#38bdf8;">FOR</span> direction <span style="color:#38bdf8;">IN</span> [N,S,E,W]:  <span style="color:#64748b;"># 4 directions each</span>
-              │
-              ├─► <span style="color:#4ade80;">calculate_base_rate(hour, dow)</span>
-              │     └─► <span style="color:#f59e0b;">Gaussian peaks: AM=8h, PM=17.5h</span>
-              │
-              ├─► <span style="color:#4ade80;">apply_intersection_factor(id)</span>
-              │     └─► <span style="color:#f59e0b;">[1.0, 0.85, 1.2, 0.95]</span>
-              │
-              ├─► <span style="color:#4ade80;">apply_direction_factor(dir)</span>
-              │     └─► <span style="color:#f59e0b;">{N:0.9, S:1.1, E:1.0, W:0.95}</span>
-              │
-              ├─► <span style="color:#4ade80;">add_noise(rate, std=0.003)</span>
-              │
-              └─► <span style="color:#fbbf24;">APPEND</span> row to DataFrame
-
-<span style="color:#64748b;"># Output: 11,520 rows (30 × 24 × 4 × 4)</span>
-<span style="color:#64748b;"># Columns: hour, dow, intersection_id, direction, arrival_rate, weather</span></pre>
+  <!-- COMPACT CODE FLOW DIAGRAM -->
+  <h3 style="margin-top:24px;">Code Flow — Layer by Layer</h3>
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0;">
+    <!-- Data Layer -->
+    <div style="background: linear-gradient(135deg, #e0f2fe, #f0f9ff); border: 2px solid #0ea5e9; border-radius: 10px; padding: 14px;">
+      <div style="font-size: 1.3em; text-align: center;">📊</div>
+      <strong style="color: #0369a1; display: block; text-align: center; margin: 6px 0;">Data Layer</strong>
+      <div style="font-size: 0.8em; color: #334155; line-height: 1.5;">
+        <code style="font-size: 0.85em;">generate_training_data()</code><br>
+        30 days × 24h × 4 int × 4 dir<br>
+        = <strong>11,520 rows</strong><br>
+        <span style="color: #64748b;">Gaussian peaks @ 8am, 5pm</span>
+      </div>
+    </div>
+    <!-- ML Layer -->
+    <div style="background: linear-gradient(135deg, #dcfce7, #f0fdf4); border: 2px solid #22c55e; border-radius: 10px; padding: 14px;">
+      <div style="font-size: 1.3em; text-align: center;">🤖</div>
+      <strong style="color: #166534; display: block; text-align: center; margin: 6px 0;">ML Layer</strong>
+      <div style="font-size: 0.8em; color: #334155; line-height: 1.5;">
+        <code style="font-size: 0.85em;">train_and_compare()</code><br>
+        12 features → LightGBM<br>
+        MAE = <strong>0.00545</strong><br>
+        <span style="color: #64748b;">Predicts arrival_rate</span>
+      </div>
+    </div>
+    <!-- Optimizer Layer -->
+    <div style="background: linear-gradient(135deg, #fef3c7, #fefce8); border: 2px solid #f59e0b; border-radius: 10px; padding: 14px;">
+      <div style="font-size: 1.3em; text-align: center;">⚙️</div>
+      <strong style="color: #92400e; display: block; text-align: center; margin: 6px 0;">Optimizer</strong>
+      <div style="font-size: 0.8em; color: #334155; line-height: 1.5;">
+        <code style="font-size: 0.85em;">compute_timings()</code><br>
+        70% ML + 30% queue<br>
+        C = (1.5L+5)/(1−Y)<br>
+        <span style="color: #64748b;">→ ns_green, ew_green</span>
+      </div>
+    </div>
+    <!-- Simulation Layer -->
+    <div style="background: linear-gradient(135deg, #f3e8ff, #faf5ff); border: 2px solid #a855f7; border-radius: 10px; padding: 14px;">
+      <div style="font-size: 1.3em; text-align: center;">🚗</div>
+      <strong style="color: #7e22ce; display: block; text-align: center; margin: 6px 0;">Simulation</strong>
+      <div style="font-size: 0.8em; color: #334155; line-height: 1.5;">
+        <code style="font-size: 0.85em;">TrafficSimulator.step()</code><br>
+        Poisson arrivals<br>
+        0.5 veh/s saturation<br>
+        <span style="color: #64748b;">→ wait time, throughput</span>
+      </div>
+    </div>
   </div>
-
-  <!-- ML Training Flow -->
-  <div style="background:linear-gradient(135deg,#dcfce7,#f0fdf4);border:2px solid #22c55e;border-radius:10px;padding:20px;margin:16px 0;">
-    <h4 style="color:#166534;margin:0 0 12px 0;">🤖 ML Layer: train_and_compare()</h4>
-    <pre style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:16px;font-family:monospace;font-size:0.82em;margin:0;overflow-x:auto;white-space:pre-wrap;"><span style="color:#64748b;"># Entry point: ml_model.py → train_and_compare(df)</span>
-
-<span style="color:#4ade80;">build_features(df)</span>                         <span style="color:#64748b;"># Step 1: Feature Engineering</span>
-  │
-  ├─► hour_sin = sin(2π × hour / 24)       <span style="color:#64748b;"># Cyclical encoding</span>
-  ├─► hour_cos = cos(2π × hour / 24)
-  ├─► is_peak_am = (7 ≤ hour ≤ 9)          <span style="color:#64748b;"># Binary flags</span>
-  ├─► is_peak_pm = (16 ≤ hour ≤ 18)
-  ├─► is_weekend = (dow ≥ 5)
-  └─► ns_direction = (dir ∈ [N, S])
-
-<span style="color:#4ade80;">train_test_split(X, y, test_size=0.2)</span>     <span style="color:#64748b;"># Step 2: Split data</span>
-  └─► X_train, X_test, y_train, y_test
-
-<span style="color:#38bdf8;">FOR</span> model_name <span style="color:#38bdf8;">IN</span> [LightGBM, RF, XGB, Linear]:  <span style="color:#64748b;"># Step 3: Train & compare</span>
-  │
-  ├─► <span style="color:#4ade80;">model.fit(X_train, y_train)</span>
-  │
-  ├─► <span style="color:#4ade80;">y_pred = model.predict(X_test)</span>
-  │
-  ├─► <span style="color:#4ade80;">calculate_metrics(y_test, y_pred)</span>
-  │     ├─► MAE  = mean(|y - ŷ|)
-  │     ├─► RMSE = sqrt(mean((y - ŷ)²))
-  │     ├─► R²   = 1 - SS_res / SS_tot
-  │     └─► Gini = 2 × AUC - 1
-  │
-  └─► <span style="color:#fbbf24;">STORE</span> metrics_row
-
-<span style="color:#4ade80;">select_best_model()</span>                        <span style="color:#64748b;"># Step 4: Pick winner by MAE</span>
-  └─► <span style="color:#f59e0b;">Return: LightGBM (MAE=0.00545)</span></pre>
-  </div>
-
-  <!-- Optimizer Flow -->
-  <div style="background:linear-gradient(135deg,#fef3c7,#fefce8);border:2px solid #f59e0b;border-radius:10px;padding:20px;margin:16px 0;">
-    <h4 style="color:#92400e;margin:0 0 12px 0;">⚙️ Optimization Layer: compute_timings()</h4>
-    <pre style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:16px;font-family:monospace;font-size:0.82em;margin:0;overflow-x:auto;white-space:pre-wrap;"><span style="color:#64748b;"># Entry point: optimizer.py → WebsterOptimizer.compute_timings()</span>
-
-<span style="color:#38bdf8;">FOR</span> intersection <span style="color:#38bdf8;">IN</span> [0, 1, 2, 3]:        <span style="color:#64748b;"># Process each intersection</span>
-  │
-  ├─► <span style="color:#4ade80;">get_ml_predictions(hour, dow, id)</span>    <span style="color:#64748b;"># Step 1: Get ML rates</span>
-  │     └─► {north: 0.12, south: 0.14, east: 0.05, west: 0.06}
-  │
-  ├─► <span style="color:#4ade80;">get_queue_lengths()</span>                  <span style="color:#64748b;"># Step 2: Get current queues</span>
-  │     └─► {north: 8, south: 5, east: 2, west: 3}
-  │
-  ├─► <span style="color:#4ade80;">blend_signals(α=0.7)</span>                 <span style="color:#64748b;"># Step 3: Hybrid blend</span>
-  │     ├─► ns_pred = max(ml.north, ml.south)     <span style="color:#f59e0b;"># 0.14</span>
-  │     ├─► ns_queue = (Q.north + Q.south) / 20   <span style="color:#f59e0b;"># 0.325</span>
-  │     └─► <span style="color:#fbbf24;">ns_demand = 0.7×ns_pred + 0.3×ns_queue</span>
-  │
-  ├─► <span style="color:#4ade80;">webster_formula(ns_demand, ew_demand)</span>  <span style="color:#64748b;"># Step 4: Compute cycle</span>
-  │     ├─► y_ns = ns_demand / 0.5               <span style="color:#64748b;"># flow ratio</span>
-  │     ├─► y_ew = ew_demand / 0.5
-  │     ├─► Y = min(y_ns + y_ew, 0.97)           <span style="color:#64748b;"># cap at 0.97</span>
-  │     └─► <span style="color:#fbbf24;">C = (1.5×L + 5) / (1 - Y)</span>       <span style="color:#64748b;"># Webster's</span>
-  │
-  ├─► <span style="color:#4ade80;">allocate_green(C, y_ns, y_ew)</span>         <span style="color:#64748b;"># Step 5: Split green time</span>
-  │     ├─► effective = C - L                    <span style="color:#64748b;"># minus lost time</span>
-  │     ├─► ns_green = effective × (y_ns / Y)
-  │     └─► ew_green = effective × (y_ew / Y)
-  │
-  └─► <span style="color:#4ade80;">enforce_constraints()</span>                 <span style="color:#64748b;"># Step 6: Safety limits</span>
-        ├─► <span style="color:#38bdf8;">IF</span> ns_green < 10: ns_green = 10  <span style="color:#64748b;"># MIN_GREEN</span>
-        ├─► <span style="color:#38bdf8;">IF</span> ew_green < 10: ew_green = 10
-        └─► <span style="color:#38bdf8;">IF</span> C > 120: C = 120              <span style="color:#64748b;"># MAX_CYCLE</span>
-
-<span style="color:#64748b;"># Output: {0: {ns_green: 45, ew_green: 15}, 1: {...}, ...}</span></pre>
-  </div>
-
-  <!-- Simulation Flow -->
-  <div style="background:linear-gradient(135deg,#f3e8ff,#faf5ff);border:2px solid #a855f7;border-radius:10px;padding:20px;margin:16px 0;">
-    <h4 style="color:#7e22ce;margin:0 0 12px 0;">🚗 Simulation Layer: TrafficSimulator.step()</h4>
-    <pre style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:16px;font-family:monospace;font-size:0.82em;margin:0;overflow-x:auto;white-space:pre-wrap;"><span style="color:#64748b;"># Entry point: simulator.py → TrafficSimulator.step()</span>
-<span style="color:#64748b;"># Called every DT=1 second of simulation time</span>
-
-<span style="color:#4ade80;">spawn_vehicles(arrival_rates)</span>              <span style="color:#64748b;"># Phase 1: Arrivals</span>
-  │
-  └─► <span style="color:#38bdf8;">FOR</span> intersection <span style="color:#38bdf8;">IN</span> self.intersections:
-      │
-      └─► <span style="color:#38bdf8;">FOR</span> direction <span style="color:#38bdf8;">IN</span> [N, S, E, W]:
-          │
-          ├─► rate = arrival_rates[id][dir]
-          ├─► <span style="color:#38bdf8;">IF</span> incident_active: rate *= 0.15  <span style="color:#64748b;"># capacity reduction</span>
-          ├─► <span style="color:#fbbf24;">n_arrivals = Poisson(λ = rate × dt)</span>
-          └─► <span style="color:#38bdf8;">FOR</span> i <span style="color:#38bdf8;">IN</span> range(n_arrivals):
-                └─► queue[dir].append({id: vid++, wait: 0})
-
-<span style="color:#4ade80;">discharge_queues()</span>                          <span style="color:#64748b;"># Phase 2: Departures</span>
-  │
-  └─► <span style="color:#38bdf8;">FOR</span> intersection <span style="color:#38bdf8;">IN</span> self.intersections:
-      │
-      └─► <span style="color:#38bdf8;">FOR</span> dir <span style="color:#38bdf8;">IN</span> intersection.green_directions():
-          │
-          ├─► <span style="color:#fbbf24;">n_depart = min(queue.length, SATURATION × dt)</span>
-          ├─► departed = queue.splice(0, n_depart)  <span style="color:#64748b;"># FIFO</span>
-          └─► <span style="color:#38bdf8;">FOR</span> vehicle <span style="color:#38bdf8;">IN</span> departed:
-                ├─► total_wait += vehicle.wait
-                └─► total_departed++
-
-<span style="color:#4ade80;">update_wait_times()</span>                         <span style="color:#64748b;"># Phase 3: Increment waits</span>
-  │
-  └─► <span style="color:#38bdf8;">FOR</span> vehicle <span style="color:#38bdf8;">IN</span> all_queued_vehicles:
-        └─► vehicle.wait += dt                  <span style="color:#64748b;"># +1 second</span>
-
-<span style="color:#4ade80;">update_lights()</span>                             <span style="color:#64748b;"># Phase 4: Phase switching</span>
-  │
-  └─► <span style="color:#38bdf8;">FOR</span> intersection <span style="color:#38bdf8;">IN</span> self.intersections:
-        │
-        ├─► timer += dt
-        └─► <span style="color:#38bdf8;">IF</span> timer >= current_phase_duration:
-              ├─► timer = 0
-              └─► <span style="color:#fbbf24;">SWITCH</span> phase (NS ↔ EW)</pre>
+  <div style="text-align: center; color: #64748b; font-size: 0.85em; margin-top: -8px;">
+    Data → Features → Model → Predictions → Webster → Green Timings → Simulation Metrics
   </div>
 
   <!-- FEATURE ENGINEERING DETAIL -->
