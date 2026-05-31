@@ -83,7 +83,7 @@
     .compare-table .pass { background: #dcfce7; }
 
     /* Code Block */
-    .code-block { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 0.85em; overflow-x: auto; margin: 12px 0; }
+    .code-block { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 0.85em; overflow-x: auto; margin: 12px 0; white-space: pre-wrap; }
     .code-block .comment { color: #64748b; }
     .code-block .keyword { color: #38bdf8; }
     .code-block .string { color: #4ade80; }
@@ -330,8 +330,7 @@
   <h3>Optimization Mechanics — Step by Step</h3>
   <p>How Webster's formula computes optimal green splits:</p>
 
-  <div style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:20px;font-family:monospace;font-size:0.85em;margin:16px 0;overflow-x:auto;">
-<span style="color:#64748b;"># Step 1: Blend ML prediction with queue feedback</span>
+  <pre style="background:#1e293b;color:#e2e8f0;border-radius:8px;padding:20px;font-family:monospace;font-size:0.85em;margin:16px 0;overflow-x:auto;white-space:pre-wrap;"><span style="color:#64748b;"># Step 1: Blend ML prediction with queue feedback</span>
 ns_pred = max(ml_rates['north'], ml_rates['south'])  <span style="color:#64748b;"># e.g., 0.42 veh/s</span>
 ew_pred = max(ml_rates['east'], ml_rates['west'])    <span style="color:#64748b;"># e.g., 0.08 veh/s</span>
 
@@ -358,8 +357,7 @@ effective = C - L  <span style="color:#64748b;"># usable green time</span>
 
 <span style="color:#64748b;"># Step 5: Enforce safety constraints</span>
 ns_green = max(ns_green, MIN_GREEN=10)  <span style="color:#64748b;"># pedestrian safety</span>
-ew_green = max(ew_green, MIN_GREEN=10)
-  </div>
+ew_green = max(ew_green, MIN_GREEN=10)</pre>
 
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0;">
     <div style="background:#f8fafc;border-radius:6px;padding:12px;text-align:center;border:1px solid #e2e8f0;">
