@@ -481,6 +481,40 @@
   <h3>Optimization Mechanics — Step by Step</h3>
   <p>How Webster's formula computes optimal green splits <strong style="color:#0ea5e9;">(recalculated every 60 seconds)</strong>:</p>
 
+  <!-- Dynamic Update Loop Visualization -->
+  <div style="background: linear-gradient(135deg, #fef3c7, #fefce8); border: 2px solid #f59e0b; border-radius: 10px; padding: 20px; margin: 16px 0;">
+    <h4 style="margin: 0 0 12px 0; color: #92400e; border: none; padding: 0;">Dynamic Update Loop (Every 60 Seconds)</h4>
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+      <div style="background: white; border-radius: 8px; padding: 12px; text-align: center; flex: 1; min-width: 140px; border: 2px solid #3b82f6;">
+        <div style="font-size: 1.5em;">🤖</div>
+        <strong style="color: #1e40af; font-size: 0.85em;">ML Predict</strong>
+        <div style="font-size: 0.75em; color: #64748b; margin-top: 4px;">4 rates × 4 intersections<br>based on current hour</div>
+      </div>
+      <div style="font-size: 1.5em; color: #f59e0b;">→</div>
+      <div style="background: white; border-radius: 8px; padding: 12px; text-align: center; flex: 1; min-width: 140px; border: 2px solid #22c55e;">
+        <div style="font-size: 1.5em;">⚖️</div>
+        <strong style="color: #166534; font-size: 0.85em;">Blend 70/30</strong>
+        <div style="font-size: 0.75em; color: #64748b; margin-top: 4px;">ML prediction +<br>queue feedback</div>
+      </div>
+      <div style="font-size: 1.5em; color: #f59e0b;">→</div>
+      <div style="background: white; border-radius: 8px; padding: 12px; text-align: center; flex: 1; min-width: 140px; border: 2px solid #f59e0b;">
+        <div style="font-size: 1.5em;">📐</div>
+        <strong style="color: #92400e; font-size: 0.85em;">Webster Formula</strong>
+        <div style="font-size: 0.75em; color: #64748b; margin-top: 4px;">C* = (1.5L+5)/(1-Y)<br>+ green split</div>
+      </div>
+      <div style="font-size: 1.5em; color: #f59e0b;">→</div>
+      <div style="background: white; border-radius: 8px; padding: 12px; text-align: center; flex: 1; min-width: 140px; border: 2px solid #dc2626;">
+        <div style="font-size: 1.5em;">🚦</div>
+        <strong style="color: #991b1b; font-size: 0.85em;">Apply Timings</strong>
+        <div style="font-size: 0.75em; color: #64748b; margin-top: 4px;">Update NS/EW green<br>for next cycle</div>
+      </div>
+    </div>
+    <div style="background: #fef9c3; border-radius: 6px; padding: 10px; margin-top: 12px; font-size: 0.85em; text-align: center;">
+      <strong style="color: #854d0e;">Key:</strong> As time progresses (7 AM → 8 AM → 9 AM), ML predictions change automatically.
+      At 7:45 AM, ML predicts rush is coming → green time shifts to NS <em>before</em> queues build.
+    </div>
+  </div>
+
   <!-- ML to Flow Ratios Explanation -->
   <div style="background:#e0f2fe;border:1px solid #0ea5e9;border-radius:8px;padding:14px;margin:16px 0;">
     <strong style="color:#0369a1;">ML → Flow Ratios Pipeline:</strong>
