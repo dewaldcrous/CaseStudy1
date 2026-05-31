@@ -651,23 +651,59 @@ function drawGrid(sim, canvasId) {
     ctx.textBaseline = 'middle';
     ctx.fillText(idx, cx, cy);
 
-    // Traffic lights
-    const lightR = 4;
-    const lightOff = roadW/2 + 6;
-    ctx.shadowBlur = 5;
+    // Traffic light helper - draws a proper traffic light symbol
+    function drawTrafficLight(x, y, isGreen, rotation) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
 
-    // NS lights (green or red)
-    ctx.fillStyle = isNSGreen ? '#0f0' : '#f00';
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.beginPath(); ctx.arc(cx, cy - lightOff, lightR, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx, cy + lightOff, lightR, 0, Math.PI*2); ctx.fill();
+      // Light housing (black rectangle)
+      const boxW = 10, boxH = 24;
+      ctx.fillStyle = '#1a1a1a';
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(-boxW/2, -boxH/2, boxW, boxH, 3);
+      ctx.fill();
+      ctx.stroke();
 
-    // EW lights
-    ctx.fillStyle = !isNSGreen ? '#0f0' : '#f00';
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.beginPath(); ctx.arc(cx + lightOff, cy, lightR, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx - lightOff, cy, lightR, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
+      // Three light positions
+      const lightR = 3;
+      const spacing = 7;
+
+      // Red light (top)
+      ctx.fillStyle = isGreen ? '#4a1a1a' : '#ff3333';
+      ctx.shadowColor = isGreen ? 'transparent' : '#ff3333';
+      ctx.shadowBlur = isGreen ? 0 : 8;
+      ctx.beginPath();
+      ctx.arc(0, -spacing, lightR, 0, Math.PI*2);
+      ctx.fill();
+
+      // Yellow light (middle) - always dim
+      ctx.fillStyle = '#4a4a1a';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(0, 0, lightR, 0, Math.PI*2);
+      ctx.fill();
+
+      // Green light (bottom)
+      ctx.fillStyle = isGreen ? '#33ff33' : '#1a4a1a';
+      ctx.shadowColor = isGreen ? '#33ff33' : 'transparent';
+      ctx.shadowBlur = isGreen ? 8 : 0;
+      ctx.beginPath();
+      ctx.arc(0, spacing, lightR, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    // Draw traffic lights at each approach
+    const lightOff = roadW/2 + 14;
+    drawTrafficLight(cx, cy - lightOff, isNSGreen, 0);           // North
+    drawTrafficLight(cx, cy + lightOff, isNSGreen, Math.PI);     // South
+    drawTrafficLight(cx + lightOff, cy, !isNSGreen, -Math.PI/2); // East
+    drawTrafficLight(cx - lightOff, cy, !isNSGreen, Math.PI/2);  // West
 
     // Draw car helper
     function drawCar(x, y, rot, col) {
@@ -705,6 +741,29 @@ function drawGrid(sim, canvasId) {
     if ((ql.south||0) > maxCars) ctx.fillText('+'+(ql.south-maxCars), cx-laneW/2, cy+oD);
     if ((ql.east||0) > maxCars) ctx.fillText('+'+(ql.east-maxCars), cx+oD, cy+laneW/2);
     if ((ql.west||0) > maxCars) ctx.fillText('+'+(ql.west-maxCars), cx-oD, cy-laneW/2);
+
+    // Total car count badge at intersection (light blue to avoid confusion with traffic lights)
+    const totalCars = (ql.north||0) + (ql.south||0) + (ql.east||0) + (ql.west||0);
+    const badgeX = cx + roadW/2 + 22;
+    const badgeY = cy - roadW/2 - 14;
+
+    // Badge background - light blue
+    ctx.fillStyle = '#0ea5e9';
+    ctx.beginPath();
+    ctx.roundRect(badgeX - 20, badgeY - 10, 40, 20, 6);
+    ctx.fill();
+
+    // Badge border
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Badge text showing total cars
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(totalCars + ' cars', badgeX, badgeY);
   }
 
   // Debug: draw canvas bounds and intersection markers
