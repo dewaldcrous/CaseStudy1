@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Traffic Light Optimisation — Live Demo (ML Model)</title>
-  <script src="ml_model.js"></script>
+  <title>Traffic Light Optimisation — Live Demo</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:"Segoe UI",Arial,sans-serif;background:#0e1117;color:#e0e4f0;min-height:100vh;overflow-y:auto}
@@ -67,7 +66,7 @@
   <div id="header">
     <div>
       <h1>Smart Traffic Light Optimisation — Live Demo</h1>
-      <div style="font-size:.72em;color:#aaa;margin-top:2px">ML-powered demand prediction • Side-by-side: Fixed baseline vs Adaptive optimizer</div>
+      <div style="font-size:.72em;color:#aaa;margin-top:2px">Side-by-side comparison: Fixed baseline vs Adaptive optimizer</div>
     </div>
     <div class="kpis">
       <div class="kpi"><div class="val" id="t-val">0s</div><div class="lbl">Sim time</div></div>
@@ -84,10 +83,6 @@
       <div id="whats-happening" style="font-size:.75em;color:#a8d8ea;line-height:1.4">
         Press <b>Start</b> to begin simulation
       </div>
-    </div>
-
-    <div id="ml-status" style="background:#1e2a1e;border-radius:6px;padding:8px;border-left:3px solid #2ecc71;font-size:.68em;color:#86efac;line-height:1.3">
-      <b>ML Model:</b> <span id="ml-status-text">Checking...</span>
     </div>
 
     <div style="background:#2a1e1e;border-radius:6px;padding:8px;border-left:3px solid #f59e0b;font-size:.68em;color:#fcd34d;line-height:1.3">
@@ -179,10 +174,7 @@
       <div class="grid-box optimized">
         <div class="grid-header optimized">OPTIMIZED (<span id="algo-name">Webster</span>)</div>
         <canvas id="canvas-opt" class="grid-canvas"></canvas>
-        <div class="grid-footer">
-          Queue: <b id="opt-q">0</b> | Wait: <b id="opt-w">0s</b> | <b id="imp-badge" style="color:#2ecc71">+0%</b>
-          <br><span style="color:#4fc3f7">Green: NS <b id="opt-ns">30</b>s (<b id="opt-ns-pct">50</b>%) | EW <b id="opt-ew">30</b>s (<b id="opt-ew-pct">50</b>%)</span>
-        </div>
+        <div class="grid-footer">Queue: <b id="opt-q">0</b> | Wait: <b id="opt-w">0s</b> | <b id="imp-badge" style="color:#2ecc71">+0%</b></div>
       </div>
     </div>
 
@@ -236,55 +228,10 @@
 const SATURATION = 0.5;
 const DT = 1.0;
 const DIRECTIONS = ['north','south','east','west'];
-const DIRECTION_ID_MAP = {north:0, south:1, east:2, west:3};
+const INTERSECTION_FACTORS = [1.0, 0.85, 1.20, 0.95];
+const DIRECTION_FACTORS = {north:0.9, south:1.1, east:1.0, west:0.95};
 
-// Current weather state (0=clear, 1=cloudy, 2=rain)
-let currentWeather = 0;
-
-/**
- * Build the feature vector for ML model prediction.
- * Features (in order): hour_sin, hour_cos, dow_sin, dow_cos,
- * is_morning_rush, is_evening_rush, is_daytime, is_weekend,
- * weather, intersection_id, direction_id, ns_direction
- */
-function buildFeatures(hour, dow, intId, dir) {
-  const dirId = DIRECTION_ID_MAP[dir];
-  const isWeekend = dow >= 5 ? 1 : 0;
-  const isNS = (dir === 'north' || dir === 'south') ? 1 : 0;
-
-  // Circular time encoding
-  const hourSin = Math.sin(2 * Math.PI * hour / 24);
-  const hourCos = Math.cos(2 * Math.PI * hour / 24);
-  const dowSin = Math.sin(2 * Math.PI * dow / 7);
-  const dowCos = Math.cos(2 * Math.PI * dow / 7);
-
-  // Period flags
-  const isMorningRush = (hour >= 7 && hour <= 9 && isWeekend === 0) ? 1 : 0;
-  const isEveningRush = (hour >= 16 && hour <= 19 && isWeekend === 0) ? 1 : 0;
-  const isDaytime = (hour >= 7 && hour <= 22) ? 1 : 0;
-
-  return [
-    hourSin, hourCos, dowSin, dowCos,
-    isMorningRush, isEveningRush, isDaytime, isWeekend,
-    currentWeather, intId, dirId, isNS
-  ];
-}
-
-/**
- * Get demand rate using the trained ML model (LightGBM).
- * Falls back to Gaussian formula if ML model not loaded.
- */
 function getDemandRate(hour, dow, intId, dir) {
-  // Check if ML model is available
-  if (typeof mlPredict === 'function') {
-    const features = buildFeatures(hour, dow, intId, dir);
-    const rate = mlPredict(features);
-    return Math.max(0.005, rate);
-  }
-
-  // Fallback to Gaussian formula (same as demo_v1.html)
-  const INTERSECTION_FACTORS = [1.0, 0.85, 1.20, 0.95];
-  const DIRECTION_FACTORS = {north:0.9, south:1.1, east:1.0, west:0.95};
   const isWeekend = dow >= 5;
   const ifact = INTERSECTION_FACTORS[intId];
   const dfact = DIRECTION_FACTORS[dir];
@@ -362,8 +309,9 @@ class TrafficSimulator {
     for (const inter of this.intersections) {
       this.recentArrivals[inter.id] = {};
       for (const dir of DIRECTIONS) {
-        // Arrivals are NOT affected by incidents - vehicles still arrive normally
         let rate = (arrivalRates[inter.id] || {})[dir] || 0.03;
+        const inc = (this.incidents[inter.id] || {})[dir];
+        if (inc !== undefined) rate *= inc;
         const n = poisson(rate * DT);
         this.recentArrivals[inter.id][dir] = n;
         for (let k=0; k<n; k++) {
@@ -384,10 +332,7 @@ class TrafficSimulator {
       for (const dir of inter.greenDirs()) {
         const q = inter.queues[dir];
         if (q.length > 0) {
-          // Incident reduces discharge capacity (fewer cars can leave)
-          const inc = (this.incidents[inter.id] || {})[dir];
-          const satFlow = inc !== undefined ? SATURATION * inc : SATURATION;
-          const nDep = Math.min(q.length, Math.floor(satFlow * DT + Math.random()));
+          const nDep = Math.min(q.length, Math.floor(SATURATION * DT + Math.random()));
           const departed = q.splice(0, nDep);
           this.recentDepartures[inter.id][dir] = nDep;
           for (const v of departed) {
@@ -894,24 +839,6 @@ function updateKPIs() {
   badge.textContent = imp >= 0 ? '+'+imp.toFixed(0)+'%' : imp.toFixed(0)+'%';
   badge.style.color = imp >= 20 ? '#2ecc71' : imp >= 0 ? '#f39c12' : '#e74c3c';
 
-  // Green time display (average across all 4 intersections for simplicity)
-  if (simOpt.intersections.length > 0) {
-    let totalNS = 0, totalEW = 0;
-    for (const inter of simOpt.intersections) {
-      totalNS += inter.nsGreen;
-      totalEW += inter.ewGreen;
-    }
-    const avgNS = totalNS / simOpt.intersections.length;
-    const avgEW = totalEW / simOpt.intersections.length;
-    const cycle = avgNS + avgEW;
-    const nsPct = cycle > 0 ? Math.round(avgNS / cycle * 100) : 50;
-    const ewPct = cycle > 0 ? Math.round(avgEW / cycle * 100) : 50;
-    document.getElementById('opt-ns').textContent = Math.round(avgNS);
-    document.getElementById('opt-ew').textContent = Math.round(avgEW);
-    document.getElementById('opt-ns-pct').textContent = nsPct;
-    document.getElementById('opt-ew-pct').textContent = ewPct;
-  }
-
   // Time indicator - smooth movement based on seconds
   const totalSeconds = (cfg.hour * 3600 + step) % 86400;
   const hourFrac = totalSeconds / 3600;
@@ -927,20 +854,15 @@ function updateKPIs() {
 
 function updateWhatsHappening(hour, mb, mo, imp) {
   let html = '';
-  const usingML = typeof mlPredict === 'function';
   if (step === 0) {
     html = 'Press <b>Start</b> to begin';
   } else {
-    // Show ML status
-    if (usingML) {
-      html = '<span style="color:#2ecc71;font-size:.9em">🤖 ML predictions active</span><br>';
-    }
     if (hour >= 7 && hour <= 9) {
-      html += '<span style="color:#ff6b6b"><b>AM Rush</b></span> — NS demand 3-4x higher than EW<br>';
+      html = '<span style="color:#ff6b6b"><b>AM Rush</b></span> — NS demand 3-4x higher than EW<br>';
     } else if (hour >= 16 && hour <= 19) {
-      html += '<span style="color:#f39c12"><b>PM Rush</b></span> — EW demand 2-3x higher<br>';
+      html = '<span style="color:#f39c12"><b>PM Rush</b></span> — EW demand 2-3x higher<br>';
     } else {
-      html += '<span style="color:#3498db"><b>Off-peak</b></span> — Balanced demand<br>';
+      html = '<span style="color:#3498db"><b>Off-peak</b></span> — Balanced demand<br>';
     }
     if (imp >= 20) {
       html += '<span style="color:#2ecc71"><b>Target met!</b></span> ' + imp.toFixed(0) + '% improvement';
@@ -1005,23 +927,18 @@ document.getElementById('trig-btn').onclick = () => {
   const i = parseInt(document.getElementById('inc-int').value);
   const dir = document.getElementById('inc-dir').value;
   const cap = parseInt(document.getElementById('cap-sl').value)/100;
-  console.log(`[INCIDENT] Triggering: intersection=${i}, direction=${dir}, capacity=${cap} (${cap*100}% throughput)`);
   if (simBase && simOpt) {
     simBase.triggerIncident(i,dir,cap);
     simOpt.triggerIncident(i,dir,cap);
-    console.log(`[INCIDENT] simBase.incidents:`, JSON.stringify(simBase.incidents));
-    console.log(`[INCIDENT] simOpt.incidents:`, JSON.stringify(simOpt.incidents));
-    document.getElementById('inc-status').textContent = 'Incident: '+dir+' @ int '+i+' ('+Math.round(cap*100)+'% capacity)';
+    document.getElementById('inc-status').textContent = 'Incident: '+dir+' @ int '+i;
   }
 };
 document.getElementById('clr-btn').onclick = () => {
   const i = parseInt(document.getElementById('inc-int').value);
   const dir = document.getElementById('inc-dir').value;
-  console.log(`[INCIDENT] Clearing: intersection=${i}, direction=${dir}`);
   if (simBase && simOpt) {
     simBase.clearIncident(i,dir);
     simOpt.clearIncident(i,dir);
-    console.log(`[INCIDENT] After clear - simOpt.incidents:`, JSON.stringify(simOpt.incidents));
     document.getElementById('inc-status').textContent = 'Cleared';
   }
 };
@@ -1034,24 +951,6 @@ window.addEventListener('resize', () => { resizeCanvases(); render(); });
 resizeCanvases();
 initSim();
 requestAnimationFrame(loop);
-
-// Check ML model status
-function updateMLStatus() {
-  const statusEl = document.getElementById('ml-status-text');
-  const boxEl = document.getElementById('ml-status');
-  if (typeof mlPredict === 'function') {
-    statusEl.textContent = 'LightGBM model loaded ✓';
-    boxEl.style.borderColor = '#2ecc71';
-    boxEl.style.background = '#1e2a1e';
-    statusEl.style.color = '#86efac';
-  } else {
-    statusEl.textContent = 'Not loaded (using Gaussian fallback)';
-    boxEl.style.borderColor = '#f59e0b';
-    boxEl.style.background = '#2a2a1e';
-    statusEl.style.color = '#fcd34d';
-  }
-}
-setTimeout(updateMLStatus, 100);
 </script>
 </body>
 </html>
