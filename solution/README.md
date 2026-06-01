@@ -10,7 +10,6 @@ A machine-learning–driven adaptive traffic signal controller for a **connected
 |----------|---------|
 | **[`demo.html`](demo.html)** | Interactive visualization — run in browser, see vehicles routing through network |
 | **[`project_overview.html`](project_overview.html)** | Comprehensive technical documentation with all figures and explanations |
-| **[`presenter_guide.html`](presenter_guide.html)** | Presentation talking points, anticipated questions, and demo walkthrough |
 
 **Open `demo.html` in any browser** to see the connected network simulation in action.
 
@@ -106,7 +105,6 @@ Requires Python 3.10+.
 solution/
 ├── demo.html              # ← Interactive browser visualization (START HERE)
 ├── project_overview.html  # ← Full technical documentation
-├── presenter_guide.html   # ← Presentation guide
 ├── run_demo.py            # Standalone Python demo with GUI controls
 ├── main.py                # Full ML pipeline orchestrator
 ├── ml_model.js            # ML predictions exported for demo.html
