@@ -866,26 +866,16 @@ function drawGrid(sim, canvasId) {
     const hasIncident = sim.incidents && sim.incidents[idx] && Object.keys(sim.incidents[idx]).length > 0;
     const incidentDir = hasIncident ? Object.keys(sim.incidents[idx])[0] : null;
 
-    // Yellow warning glow around intersection if incident
-    if (hasIncident) {
-      ctx.save();
-      ctx.shadowColor = '#ffcc00';
-      ctx.shadowBlur = 20;
-      ctx.fillStyle = 'rgba(255, 200, 0, 0.3)';
-      ctx.fillRect(cx - roadW - 10, cy - roadW - 10, roadW*2 + 20, roadW*2 + 20);
-      ctx.restore();
-
-      // Yellow/black striped border (construction zone)
-      ctx.strokeStyle = '#ffcc00';
-      ctx.lineWidth = 4;
-      ctx.setLineDash([6, 4]);
-      ctx.strokeRect(cx - roadW/2 - 8, cy - roadW/2 - 8, roadW + 16, roadW + 16);
-      ctx.setLineDash([]);
-    }
-
     // Intersection center
     ctx.fillStyle = '#333';
     ctx.fillRect(cx - roadW/2, cy - roadW/2, roadW, roadW);
+
+    // Small yellow border if incident (subtle)
+    if (hasIncident) {
+      ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - roadW/2 - 1, cy - roadW/2 - 1, roadW + 2, roadW + 2);
+    }
 
     // ID label with background
     ctx.fillStyle = hasIncident ? '#ff6b6b' : '#222';
@@ -898,59 +888,32 @@ function drawGrid(sim, canvasId) {
     ctx.textBaseline = 'middle';
     ctx.fillText(idx, cx, cy);
 
-    // Incident: construction barrier on blocked direction
+    // Incident: small barrier block on blocked direction
     if (hasIncident) {
-      const barrierOffset = roadW/2 + 15;
-      let bx = cx, by = cy, bw = roadW * 0.8, bh = 8, rot = 0;
+      const barrierOffset = roadW/2 + 8;
+      let bx = cx, by = cy;
 
-      if (incidentDir === 'north') { bx = cx; by = cy - barrierOffset; rot = 0; }
-      else if (incidentDir === 'south') { bx = cx; by = cy + barrierOffset; rot = 0; }
-      else if (incidentDir === 'east') { bx = cx + barrierOffset; by = cy; rot = Math.PI/2; }
-      else if (incidentDir === 'west') { bx = cx - barrierOffset; by = cy; rot = Math.PI/2; }
+      if (incidentDir === 'north') { bx = cx; by = cy - barrierOffset; }
+      else if (incidentDir === 'south') { bx = cx; by = cy + barrierOffset; }
+      else if (incidentDir === 'east') { bx = cx + barrierOffset; by = cy; }
+      else if (incidentDir === 'west') { bx = cx - barrierOffset; by = cy; }
 
-      ctx.save();
-      ctx.translate(bx, by);
-      ctx.rotate(rot);
-
-      // Construction barrier (orange/white stripes)
+      // Small orange/yellow construction block
       ctx.fillStyle = '#ff6600';
-      ctx.fillRect(-bw/2, -bh/2, bw, bh);
+      ctx.fillRect(bx - 5, by - 5, 10, 10);
+      ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx - 5, by - 5, 10, 10);
 
-      // White diagonal stripes
+      // X mark on block
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      for (let i = -bw/2; i < bw/2; i += 6) {
-        ctx.moveTo(i, -bh/2);
-        ctx.lineTo(i + bh, bh/2);
-      }
+      ctx.moveTo(bx - 3, by - 3);
+      ctx.lineTo(bx + 3, by + 3);
+      ctx.moveTo(bx + 3, by - 3);
+      ctx.lineTo(bx - 3, by + 3);
       ctx.stroke();
-
-      // Border
-      ctx.strokeStyle = '#cc5500';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(-bw/2, -bh/2, bw, bh);
-
-      ctx.restore();
-
-      // Warning triangle with "!" on barrier
-      ctx.fillStyle = '#ffcc00';
-      ctx.beginPath();
-      const tx = bx + (rot === 0 ? 0 : (incidentDir === 'east' ? 12 : -12));
-      const ty = by + (rot === 0 ? (incidentDir === 'north' ? -14 : 14) : 0);
-      ctx.moveTo(tx, ty - 8);
-      ctx.lineTo(tx - 7, ty + 5);
-      ctx.lineTo(tx + 7, ty + 5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Exclamation mark
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText('!', tx, ty + 2);
     }
 
     // Traffic light helper - draws a proper traffic light symbol
