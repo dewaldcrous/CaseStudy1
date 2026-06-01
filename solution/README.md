@@ -56,16 +56,28 @@ pip install -r requirements.txt
 # 2. Open the interactive demo (recommended)
 #    Just open demo.html in any browser - no server needed
 
-# 3. Run the full ML pipeline + benchmarks
+# 3. Run standalone Python visualization (smooth animation)
+python run_demo.py              # AM Rush (default)
+python run_demo.py pm_rush      # PM Rush
+python run_demo.py full_day     # Full day cycle
+# Or use the batch file:
+run_demo.bat
+
+# 4. Run the full ML pipeline + benchmarks
 python main.py
 
-# 4. Run live animated demos (Python visualization)
-python main.py demo_am_rush    # Monday 8am — NS dominant
-python main.py demo_full_day   # Full 24-hour cycle
-python main.py demo_incident   # Accident + recovery
-
-# 5. Run Streamlit dashboard
+# 5. Run Streamlit dashboard (interactive controls)
 streamlit run dashboard.py
+```
+
+### Build Executable (Optional)
+
+```bash
+# Create standalone .exe (no Python required)
+pip install pyinstaller
+python build_exe.py
+
+# Output: dist/TrafficDemo.exe
 ```
 
 Requires Python 3.10+.
@@ -78,19 +90,21 @@ Requires Python 3.10+.
 solution/
 ├── demo.html              # ← Interactive browser visualization (START HERE)
 ├── project_overview.html  # ← Full technical documentation
-├── presenter_guide.html   # ← Presentation guide with talking points
+├── presenter_guide.html   # ← Presentation guide
+├── run_demo.py            # Standalone Python demo (smooth animation)
+├── run_demo.bat           # Batch launcher for Python demo
+├── build_exe.py           # Build standalone .exe with PyInstaller
 ├── main.py                # ML pipeline orchestrator
 ├── dashboard.py           # Streamlit dashboard
+├── ml_model.js            # ML predictions for demo.html
 ├── src/
-│   ├── simulator.py       # Connected network simulation engine
+│   ├── simulator.py       # Connected network simulation
 │   ├── ml_model.py        # LightGBM traffic prediction
-│   ├── optimizer.py       # Webster's formula + 6 controller variants
+│   ├── optimizer.py       # Webster's formula + controllers
 │   ├── live_viz.py        # Matplotlib animation
 │   └── model_validation.py
-├── models/
-│   ├── best_model.pkl     # Saved LightGBM model
-│   └── best_scaler.pkl    # Feature scaler
-└── figures/               # Generated analysis figures
+├── models/                # Saved ML models
+└── figures/               # Generated charts
 ```
 
 ---
