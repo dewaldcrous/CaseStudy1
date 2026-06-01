@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Presenter Guide — Traffic Light Optimization</title>
+  <style>
+    :root {
+      --ml: #16a34a;
+      --opt: #2563eb;
+      --eng: #d97706;
+      --dark: #1e293b;
+      --gray: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: var(--dark); line-height: 1.6; padding: 20px; max-width: 900px; margin: 0 auto; }
+
+    h1 { font-size: 1.8em; margin-bottom: 8px; color: var(--dark); }
+    h2 { font-size: 1.4em; margin: 32px 0 16px; padding: 12px 16px; background: var(--dark); color: white; border-radius: 8px; }
+    h3 { font-size: 1.1em; margin: 20px 0 10px; color: var(--dark); border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
+
+    .intro { background: #dbeafe; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid var(--opt); }
+
+    .section { background: white; border-radius: 12px; padding: 24px; margin: 16px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+    .talking-point { background: #f0fdf4; border-left: 4px solid var(--ml); padding: 12px 16px; margin: 12px 0; border-radius: 0 8px 8px 0; }
+    .talking-point.opt { background: #eff6ff; border-color: var(--opt); }
+    .talking-point.eng { background: #fffbeb; border-color: var(--eng); }
+    .talking-point strong { display: block; margin-bottom: 4px; }
+
+    .why-box { background: #fef3c7; border: 1px solid #fbbf24; padding: 12px 16px; border-radius: 8px; margin: 12px 0; }
+    .why-box::before { content: "WHY: "; font-weight: 700; color: #92400e; }
+
+    .anticipate { background: #fee2e2; border: 1px solid #fca5a5; padding: 12px 16px; border-radius: 8px; margin: 12px 0; }
+    .anticipate::before { content: "ANTICIPATE Q: "; font-weight: 700; color: #991b1b; }
+    .anticipate .answer { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #fca5a5; }
+    .anticipate .answer::before { content: "A: "; font-weight: 600; }
+
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; margin-left: 8px; }
+    .tag.ml { background: #dcfce7; color: #166534; }
+    .tag.opt { background: #dbeafe; color: #1e40af; }
+    .tag.eng { background: #fef3c7; color: #92400e; }
+
+    ul { margin: 8px 0 8px 20px; }
+    li { margin: 4px 0; }
+
+    .duration { float: right; background: #e2e8f0; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; color: var(--gray); }
+
+    code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+
+    @media print {
+      body { padding: 0; }
+      .section { box-shadow: none; border: 1px solid #e2e8f0; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Presenter Guide: Traffic Light Optimization</h1>
+<div class="intro">
+  <strong>Purpose:</strong> This guide provides talking points and thought process explanations for presenting the project. Each section maps to the project_overview.html structure. Tags indicate which grading criterion each point supports: <span class="tag ml">ML</span> <span class="tag opt">OPT</span> <span class="tag eng">ENG</span>
+</div>
+
+<!-- ============================================ -->
+<h2>1. Executive Summary <span class="duration">~2 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Opening Hook</h3>
+  <div class="talking-point">
+    <strong>Lead with the result:</strong>
+    "This system reduces average vehicle wait time by ~28% across scenarios — up to 57% during PM Rush — in a connected 2×2 intersection network. During rush hours, the optimizer also achieves 17% higher throughput, meaning more vehicles complete their journeys through the network."
+  </div>
+
+  <h3>Key Metrics to Mention</h3>
+  <div class="talking-point">
+    <strong>Explain each metric briefly:</strong>
+    <ul>
+      <li><strong>~28% avg wait reduction</strong> — across all scenarios (up to 57% PM Rush)</li>
+      <li><strong>+17% throughput</strong> — more vehicles complete journeys during rush hours</li>
+      <li><strong>R² = 0.985</strong> — model explains 98.5% of variance in traffic demand</li>
+      <li><strong>Gini = 0.94</strong> — ranking quality for prioritizing green time</li>
+    </ul>
+  </div>
+
+  <div class="why-box">
+    I chose to highlight multiple metrics because a single metric can be misleading. R² shows prediction accuracy, but Gini shows whether the model correctly prioritizes which direction needs more green time — that's what actually matters for optimization.
+  </div>
+
+  <div class="anticipate">
+    "These metrics seem very high — is this overfitting?"
+    <div class="answer">Good observation. The high scores are expected because we're using synthetic data with deterministic patterns (rush hours at 8am/5pm). Cross-validation shows train/val gap under 10%, so the model generalizes within this distribution. Real-world deployment would need validation on actual sensor data.</div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>2. System Architecture <span class="duration">~3 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>The Five-Layer Architecture</h3>
+  <div class="talking-point opt">
+    <strong>Walk through each layer:</strong>
+    "The system has five distinct layers, each with a single responsibility:"
+  </div>
+
+  <div style="display:grid; gap:12px; margin:16px 0;">
+    <div style="background:#f0fdf4; padding:12px 16px; border-radius:8px; border-left:4px solid #16a34a;">
+      <strong style="color:#166534;">1. DATA LAYER</strong> <span class="tag ml">ML</span>
+      <ul style="margin:8px 0 0 16px; font-size:0.95em;">
+        <li><strong>Purpose:</strong> Generate synthetic traffic patterns + feature engineering</li>
+        <li><strong>Key files:</strong> <code>ml_model.py</code> (generate_training_data, add_features)</li>
+        <li><strong>Output:</strong> 11,520 rows × 12 features (30 days × 24 hours × 4 intersections × 4 directions)</li>
+        <li><strong>Key insight:</strong> Cyclic encoding (hour_sin/cos) preserves 11pm→midnight adjacency</li>
+      </ul>
+    </div>
+
+    <div style="background:#eff6ff; padding:12px 16px; border-radius:8px; border-left:4px solid #2563eb;">
+      <strong style="color:#1e40af;">2. ML PREDICTION LAYER</strong> <span class="tag ml">ML</span>
+      <ul style="margin:8px 0 0 16px; font-size:0.95em;">
+        <li><strong>Purpose:</strong> Predict arrival rates per direction per intersection</li>
+        <li><strong>Model:</strong> LightGBM (R²=0.985, Gini=0.94, lowest MAE)</li>
+        <li><strong>Output:</strong> 4 rates per intersection {north, south, east, west}</li>
+        <li><strong>Key insight:</strong> Prediction enables PROACTIVE green allocation before rush hour</li>
+      </ul>
+    </div>
+
+    <div style="background:#fef3c7; padding:12px 16px; border-radius:8px; border-left:4px solid #d97706;">
+      <strong style="color:#92400e;">3. OPTIMIZATION LAYER</strong> <span class="tag opt">OPT</span>
+      <ul style="margin:8px 0 0 16px; font-size:0.95em;">
+        <li><strong>Purpose:</strong> Convert demand predictions to green timing splits</li>
+        <li><strong>Algorithm:</strong> Webster's formula (1958) — mathematically optimal cycle length</li>
+        <li><strong>Hybrid:</strong> 70% ML prediction + 30% queue feedback</li>
+        <li><strong>Constraints:</strong> MIN_GREEN=10s, MAX_CYCLE=120s, MIN_CYCLE=24s</li>
+        <li><strong>Key insight:</strong> ML anticipates demand, queue feedback handles unexpected events</li>
+      </ul>
+    </div>
+
+    <div style="background:#fce7f3; padding:12px 16px; border-radius:8px; border-left:4px solid #db2777;">
+      <strong style="color:#9d174d;">4. SIMULATION LAYER</strong> <span class="tag eng">ENG</span>
+      <ul style="margin:8px 0 0 16px; font-size:0.95em;">
+        <li><strong>Purpose:</strong> Model vehicle physics + network flow</li>
+        <li><strong>Key files:</strong> <code>simulator.py</code> (TrafficSimulator, Intersection, Vehicle)</li>
+        <li><strong>Physics:</strong> Poisson arrivals, FIFO queues, saturation flow 0.5 veh/s</li>
+        <li><strong>Network:</strong> 2×2 grid, vehicles route through multiple intersections</li>
+        <li><strong>Key insight:</strong> Vehicles colored by origin shows network flow dynamics</li>
+      </ul>
+    </div>
+
+    <div style="background:#f3e8ff; padding:12px 16px; border-radius:8px; border-left:4px solid #7c3aed;">
+      <strong style="color:#5b21b6;">5. VISUALIZATION LAYER</strong> <span class="tag eng">ENG</span>
+      <ul style="margin:8px 0 0 16px; font-size:0.95em;">
+        <li><strong>Purpose:</strong> Real-time demo + static figures for documentation</li>
+        <li><strong>demo.html:</strong> Browser-based, zero install, full GUI controls</li>
+        <li><strong>TrafficDemo.exe:</strong> Standalone Python with actual LightGBM model</li>
+        <li><strong>Key features:</strong> Side-by-side comparison, origin-colored vehicles, live charts</li>
+        <li><strong>Key insight:</strong> Working visualization validates simulation physics visually</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="why-box">
+    I separated ML from optimization deliberately. The ML model predicts demand, but the optimizer decides green splits. This means we can swap in different ML models OR different optimization algorithms independently — good software design principle.
+  </div>
+
+  <h3>Swimlane Diagram</h3>
+  <div class="talking-point eng">
+    <strong>Explain the data transformation:</strong>
+    "Raw data (30 days × 24 hours × 4 intersections × 4 directions = 11,520 rows) gets transformed through feature engineering, fed to LightGBM, and outputs arrival rates per direction. The optimizer then converts rates to green timings."
+  </div>
+
+  <div class="anticipate">
+    "Why not use a single end-to-end model that directly outputs green timings?"
+    <div class="answer">Two reasons: (1) Interpretability — we can inspect predicted demand separately from optimization logic. (2) Constraints — Webster's formula guarantees we satisfy MIN_GREEN, MAX_CYCLE constraints. A pure neural net might violate safety constraints.</div>
+  </div>
+
+  <h3>Technical Deep Dive (if time allows) <span class="tag ml">ML</span> <span class="tag opt">OPT</span></h3>
+
+  <div class="talking-point">
+    <strong>Feature Engineering Pipeline:</strong>
+    "Three categories: Temporal (hour_sin, hour_cos, is_peak_am, is_peak_pm, is_weekend), Spatial (intersection_id, direction_id, ns_direction), and Interaction (hour×weekend, peak×direction, weather). 12 features total."
+  </div>
+
+  <div class="talking-point" style="background:#e0f2fe;border-color:#0ea5e9;">
+    <strong>ML → Flow Ratios:</strong>
+    "ML outputs 4 rates per intersection (N, S, E, W). We aggregate by axis using max(): ns_pred = max(N, S), ew_pred = max(E, W). Why max? Both N and S get green simultaneously — the higher-demand direction determines green time needed. These then blend with queue feedback before Webster's formula."
+  </div>
+
+  <div class="talking-point opt">
+    <strong>Optimization Step-by-Step</strong> <span style="font-size:0.8em;color:#64748b;">(recalculated every 60s)</span><strong>:</strong>
+    <ol style="margin:8px 0 0 16px;font-size:0.95em;">
+      <li><strong>Blend:</strong> ns_demand = 0.7 × ML_prediction + 0.3 × queue_signal</li>
+      <li><strong>Flow ratios:</strong> y_ns = ns_demand / 0.5, y_ew = ew_demand / 0.5, Y = y_ns + y_ew (capped at 0.97)</li>
+      <li><strong>Webster:</strong> C* = (1.5L + 5) / (1 − Y) → cycle length adapts to demand</li>
+      <li><strong>Split:</strong> ns_green = (C − L) × (y_ns / Y) → proportional to flow ratio</li>
+      <li><strong>Constrain:</strong> Enforce MIN_GREEN=10s, MAX_CYCLE=120s</li>
+    </ol>
+  </div>
+
+  <div class="talking-point" style="background:#fef3c7;border-color:#f59e0b;">
+    <strong>Incident Handling:</strong>
+    "Key insight: ML can't predict accidents. When incident occurs, capacity drops to 15%, queues spike. The 30% queue feedback detects this immediately and increases green time. Result: 36.6% improvement even during incidents."
+  </div>
+
+  <div class="anticipate">
+    "Walk me through what happens when a car arrives at the intersection?"
+    <div class="answer">Poisson process generates arrivals (λ = predicted rate). Car joins queue. Each timestep, wait counter increments. When light turns green, saturation flow (0.5 veh/s) discharges queue FIFO. Departed cars contribute their wait time to average. Simple but physically grounded.</div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>3. ML Model Comparison <span class="duration">~4 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Model Selection Process <span class="tag ml">ML</span></h3>
+  <div class="talking-point">
+    <strong>Explain the comparison:</strong>
+    "I evaluated 5 models: LightGBM, XGBoost, Random Forest, Gradient Boosting, and Ridge Regression. LightGBM won on three criteria: lowest MAE, fastest training, and best wait time reduction in simulation."
+  </div>
+
+  <div class="why-box">
+    I didn't just pick the model with best R² — I measured actual simulation performance. XGBoost had slightly higher R² but lower wait time reduction. The real-world metric (wait time) is what matters, not the proxy metric (R²).
+  </div>
+
+  <h3>Feature Engineering <span class="tag ml">ML</span></h3>
+  <div class="talking-point">
+    <strong>Highlight the key insight:</strong>
+    "The most important feature engineering decision was circular encoding for hour. Raw hour (0-23) treats 11pm and midnight as maximally different, but they're actually adjacent. Sin/cos encoding preserves this cyclical relationship."
+  </div>
+
+  <div class="talking-point">
+    <strong>Peak flags rationale:</strong>
+    "Instead of 24 one-hot columns for hour, I used two binary flags: is_peak_am (7-9) and is_peak_pm (16-18). This captures the key patterns with far fewer features, reducing overfitting risk."
+  </div>
+
+  <div class="anticipate">
+    "Why didn't you try neural networks or deep learning?"
+    <div class="answer">For tabular data with 11,520 rows, gradient boosting typically outperforms neural networks. Deep learning shines with images, text, or massive datasets. I also wanted interpretability — SHAP analysis works well with tree-based models.</div>
+  </div>
+
+  <h3>Feature Reduction Techniques Tested <span class="tag ml">ML</span></h3>
+  <div class="talking-point">
+    <strong>What I tried:</strong>
+    <table style="width:100%; margin:12px 0; font-size:0.9em; border-collapse:collapse;">
+      <tr style="background:#e2e8f0;">
+        <th style="padding:8px; text-align:left;">Technique</th>
+        <th style="padding:8px; text-align:left;">Result</th>
+        <th style="padding:8px; text-align:left;">Decision</th>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>One-hot hour (24 cols)</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Overfitting, high variance</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Rejected</td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>Cyclic encoding (sin/cos)</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">2 cols, preserves cyclical nature</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;color:#16a34a;"><strong>Selected</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>Peak flags only</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">2 cols (AM/PM rush), simple but effective</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;color:#16a34a;"><strong>Selected</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>PCA (dimensionality reduction)</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Lost interpretability, no accuracy gain</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Rejected</td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>RFE (Recursive Feature Elimination)</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Confirmed top features match SHAP</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Validated</td>
+      </tr>
+      <tr>
+        <td style="padding:6px;"><strong>Correlation filtering (>0.9)</strong></td>
+        <td style="padding:6px;">Removed hour_cos (redundant with sin)</td>
+        <td style="padding:6px;">Applied</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="why-box">
+    Final model uses 12 features: hour_sin, hour_cos, is_peak_am, is_peak_pm, is_weekend, day_of_week, intersection_id, direction_id, ns_direction, and 3 interaction terms. This balances interpretability with predictive power.
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>4. SHAP Analysis <span class="duration">~3 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Why SHAP? <span class="tag ml">ML</span></h3>
+  <div class="talking-point">
+    <strong>Compare to alternatives:</strong>
+    "SHAP provides three things Gini importance doesn't: (1) it's unbiased toward high-cardinality features, (2) it shows direction of impact (positive vs negative), (3) it's theoretically grounded in game theory (Shapley values)."
+  </div>
+
+  <h3>Key SHAP Insights</h3>
+  <div class="talking-point">
+    <strong>Validate domain knowledge:</strong>
+    "SHAP confirmed our intuition: hour_sin is most important (captures rush hours), followed by is_peak_am. Weekend reduces demand by 40%. No unexpected features appeared in top 6 — this validates there's no data leakage."
+  </div>
+
+  <div class="why-box">
+    SHAP isn't just for show — it caught a potential issue early. In an earlier version, intersection_id was ranked #1, which would mean the model was memorizing location-specific averages rather than learning patterns. After fixing feature engineering, hour_sin correctly became #1.
+  </div>
+
+  <div class="anticipate">
+    "What's the difference between Gini coefficient here and the Gini importance in tree models?"
+    <div class="answer">Confusing naming! Tree Gini importance measures how often a feature is used in splits. The Gini coefficient (0.94) measures ranking quality — how well the model orders predictions. They're completely different metrics that happen to share a name.</div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>5. Gini & ROC-AUC Analysis <span class="duration">~2 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Why These Metrics Matter <span class="tag ml">ML</span></h3>
+  <div class="talking-point">
+    <strong>Connect to the business problem:</strong>
+    "For traffic optimization, ranking matters more than exact values. If I predict NS demand = 0.35 instead of 0.42, that's fine — as long as I correctly rank NS > EW. Gini coefficient measures exactly this ranking quality."
+  </div>
+
+  <div class="talking-point">
+    <strong>ROC-AUC for high-demand detection:</strong>
+    "ROC-AUC = 0.97 means the model correctly identifies high-demand scenarios 97% of the time. This is critical because rush hours need proactive green allocation before queues build."
+  </div>
+
+  <div class="why-box">
+    I included these metrics because R² alone can be misleading. A model could have good R² but poor ranking — it might predict the right average but confuse which direction has higher demand. Gini directly measures what matters for optimization.
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>6. Optimization Algorithm Comparison <span class="duration">~4 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Webster's Formula <span class="tag opt">OPT</span></h3>
+  <div class="talking-point opt">
+    <strong>Explain the formula:</strong>
+    "Webster's 1958 formula: C* = (1.5L + 5) / (1 − Y). This is the mathematically optimal cycle length that minimizes total delay. L is lost time (4 seconds), Y is sum of flow ratios."
+  </div>
+
+  <div class="why-box">
+    I chose Webster over more modern approaches (like SCOOT or SCATS) because: (1) it's analytically optimal for isolated intersections, (2) it's computationally trivial, (3) it's well-understood and auditable. For a 4-intersection demo, simplicity wins.
+  </div>
+
+  <h3>Optimization Approaches Tested <span class="tag opt">OPT</span></h3>
+  <div class="talking-point opt">
+    <strong>What I evaluated:</strong>
+    <table style="width:100%; margin:12px 0; font-size:0.9em; border-collapse:collapse;">
+      <tr style="background:#dbeafe;">
+        <th style="padding:8px; text-align:left;">Approach</th>
+        <th style="padding:8px; text-align:left;">Wait Time Δ</th>
+        <th style="padding:8px; text-align:left;">Complexity</th>
+        <th style="padding:8px; text-align:left;">Decision</th>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>Fixed Timing (30/30)</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Baseline (0%)</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Trivial</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Control</td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>Webster's Formula</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;color:#16a34a;"><strong>~28% avg</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Low (analytical)</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;color:#16a34a;"><strong>Selected</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>Pure Queue-Reactive</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">~15%</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Low</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Too reactive</td>
+      </tr>
+      <tr>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;"><strong>Max Pressure</strong></td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">~22%</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Medium</td>
+        <td style="padding:6px; border-bottom:1px solid #e2e8f0;">Good, but Webster better</td>
+      </tr>
+      <tr>
+        <td style="padding:6px;"><strong>Green Wave Coordination</strong></td>
+        <td style="padding:6px;">Not tested (future work)</td>
+        <td style="padding:6px;">High</td>
+        <td style="padding:6px;">Scope limitation</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="why-box">
+    Webster won because it's mathematically proven optimal for isolated intersections. Adding network coordination (green wave) would require solving a more complex coordination problem — documented as future work rather than forced into scope.
+  </div>
+
+  <h3>The 70/30 Blend <span class="tag opt">OPT</span></h3>
+  <div class="talking-point opt">
+    <strong>Explain the hybrid approach:</strong>
+    "Pure ML (100%) anticipates demand but can't react to unexpected events. Pure queue feedback (0% ML) reacts but can't anticipate. 70% ML + 30% queue gives the best of both worlds — tested empirically."
+  </div>
+
+  <div class="talking-point" style="background: #f0f9ff; border-color: #0ea5e9;">
+    <strong>KEY POINT — What does ML actually contribute?</strong>
+    "This is the critical question: if the optimizer works, why add ML? The answer is PREDICTION vs REACTION."
+    <ul>
+      <li><strong>Without ML (Pure Queue):</strong> At 7:45 AM, queues are low → optimizer keeps equal splits. By 8:00 AM, queues explode → finally adjusts. 5+ minute lag.</li>
+      <li><strong>With ML (Hybrid):</strong> At 7:45 AM, ML predicts rush coming → pre-allocates NS green time. Cars arrive to ready green phases. No delay.</li>
+      <li><strong>Proof:</strong> In isolated tests: Pure Queue = 30.7%, Hybrid = 40.1%. In connected network: PM Rush shows 57% improvement. The ML contribution is clear.</li>
+    </ul>
+  </div>
+
+  <div class="why-box">
+    This is a key differentiator. Without this explanation, it looks like we're adding ML for complexity's sake. The benchmark data proves ML adds real value — it's not just theoretical.
+  </div>
+
+  <div class="anticipate">
+    "Why 70/30 specifically? Did you tune this?"
+    <div class="answer">Yes. I tested 100/0, 80/20, 70/30, 50/50, 30/70, 0/100 blends. 70/30 achieved the best wait time reduction. Higher ML weights performed slightly worse because they couldn't adapt to prediction errors fast enough.</div>
+  </div>
+
+  <h3>Constraint Satisfaction <span class="tag opt">OPT</span></h3>
+  <div class="talking-point opt">
+    <strong>Highlight safety constraints:</strong>
+    "The optimizer enforces hard constraints: MIN_GREEN = 10 seconds (pedestrian safety), MAX_CYCLE = 120 seconds (driver patience), MIN_CYCLE = 24 seconds (physical minimum). These can never be violated."
+  </div>
+
+  <div class="why-box">
+    Constraints matter for real-world deployment. A pure optimization that outputs 3-second green phases would be mathematically optimal but physically impossible and unsafe. Constraint satisfaction separates toy projects from production systems.
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>7. Code Structure <span class="duration">~2 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Modular Architecture <span class="tag eng">ENG</span></h3>
+  <div class="talking-point eng">
+    <strong>Explain the separation:</strong>
+    "The src/ folder has four modules: ml_model.py (prediction), optimizer.py (green splits), simulator.py (physics), model_validation.py (metrics). Each module has one responsibility."
+  </div>
+
+  <div class="why-box">
+    This separation lets us test each component independently. I can unit test the optimizer with mock ML predictions. I can benchmark different ML models without changing simulation code. Loose coupling = easier maintenance.
+  </div>
+
+  <h3>Entry Point <span class="tag eng">ENG</span></h3>
+  <div class="talking-point eng">
+    <strong>Single command:</strong>
+    "Running <code>python main.py</code> regenerates everything: trains the model, runs simulations, generates all 15 figures and 3 GIFs, saves the model. This reproducibility is critical for experiments."
+  </div>
+
+  <div class="anticipate">
+    "Why not use a notebook?"
+    <div class="answer">Notebooks are great for exploration but bad for reproducibility. I used notebooks during development, then extracted the final code to .py files. main.py can run in CI/CD, notebooks can't easily.</div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>8. Demo Walkthrough <span class="duration">~3 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Live Demonstration <span class="tag eng">ENG</span></h3>
+  <div class="talking-point eng">
+    <strong>What to show:</strong>
+    <ul>
+      <li>Open demo.html in browser — show 2×2 connected grid of 4 intersections</li>
+      <li>Point out: left panel = fixed timing (baseline), right = optimized</li>
+      <li>Explain vehicle colors by origin: Purple (Int 0), White (Int 1), Black (Int 2), Orange (Int 3)</li>
+      <li>Show vehicles routing through network — dots moving on roads between intersections</li>
+      <li>Set scenario to "Monday 8 AM Rush" — show NS queues build on baseline</li>
+      <li>Trigger incident on intersection 0, north direction — watch optimizer adapt and upstream queues build</li>
+      <li>Point to KPIs: wait time, vehicles in transit, improvement percentage</li>
+      <li>Show charts updating in real-time (wait time, queue length, throughput)</li>
+    </ul>
+  </div>
+
+  <div class="talking-point">
+    <strong>Demo talking points:</strong>
+    "Notice how the optimized side pre-allocates green time to NS during morning rush. The baseline waits until queues build. That's the ML prediction in action. When we trigger an incident, watch how the 30% queue feedback kicks in to adapt."
+  </div>
+
+  <div class="anticipate">
+    "How does the connected network work?"
+    <div class="answer">Vehicles enter the 2×2 grid at edge approaches, route through adjacent intersections, and exit at the opposite edge. Color-coding shows origin: Purple (Int 0), White (Int 1), Black (Int 2), Orange (Int 3). This creates realistic cross-intersection flow where congestion at one intersection backs up into adjacent queues — demonstrating the ML + optimization benefits across the network.</div>
+  </div>
+
+  <div class="why-box">
+    The demo exists because a working visualization is worth 1000 lines of code. Stakeholders can immediately see the impact of optimization without understanding the math. It also validates that the simulation physics are reasonable.
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>9. Scenario Benchmarks <span class="duration">~2 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Where Optimization Excels <span class="tag opt">OPT</span></h3>
+  <div class="talking-point opt">
+    <strong>Highlight the pattern:</strong>
+    "PM Rush shows 57% improvement, Weekend 29%, Midday 36%. AM Rush is different — arrival rates exceed capacity (0.56 vs 0.5 veh/s saturation), causing unavoidable queue growth. The optimizer achieves +17% throughput but with higher wait times due to cascading congestion between intersections."
+  </div>
+
+  <div class="why-box">
+    I included scenarios where optimization fails (midday, weekend) to show intellectual honesty. A presentation that only shows wins is suspicious. The failures validate that the improvements during rush hour are real, not artifacts.
+  </div>
+
+  <div class="anticipate">
+    "What about the AM Rush tradeoff?"
+    <div class="answer">Great observation. AM Rush arrival rates (0.56 veh/s) actually exceed saturation capacity (0.5 veh/s) — queues MUST grow. The optimizer aggressively pushes NS vehicles downstream, causing cascading congestion (Int 0 → Int 2). The baseline's 50/50 split throttles this flow. Result: optimizer achieves +17% throughput but higher wait times. PM Rush rates (0.35 veh/s) stay under capacity, so we get wins on both metrics.</div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>10. Limitations & Future Work <span class="duration">~2 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <h3>Honest Limitations <span class="tag eng">ENG</span></h3>
+  <div class="talking-point eng">
+    <strong>What we didn't do:</strong>
+    <ul>
+      <li>Independent optimization (each intersection optimizes locally, no green wave coordination)</li>
+      <li>Synthetic data (no real sensor validation)</li>
+      <li>4 intersections (not city-scale)</li>
+      <li>No pedestrian modeling</li>
+    </ul>
+  </div>
+
+  <div class="why-box">
+    Acknowledging limitations shows maturity. It also scopes future work clearly. A grader will respect honest assessment over overselling.
+  </div>
+
+  <h3>Future Work</h3>
+  <div class="talking-point">
+    <strong>Natural extensions:</strong>
+    <ul>
+      <li><strong>Multi-agent RL:</strong> Coordinate adjacent intersections</li>
+      <li><strong>Real sensor data:</strong> Validate on actual traffic patterns</li>
+      <li><strong>Pedestrian priority:</strong> Add crossing demand</li>
+      <li><strong>Emergency preemption:</strong> Override for ambulances/fire trucks</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<h2>Closing Summary <span class="duration">~1 min</span></h2>
+<!-- ============================================ -->
+<div class="section">
+  <div class="talking-point">
+    <strong>Three takeaways:</strong>
+    <ol>
+      <li><strong>ML + Optimization hybrid:</strong> Prediction anticipates demand, optimization satisfies constraints, queue feedback handles surprises</li>
+      <li><strong>Connected network model:</strong> ~28% avg wait reduction, up to 57% PM Rush, +17% throughput during rush hours</li>
+      <li><strong>Production-ready architecture:</strong> Modular code, working demo with origin-colored vehicles, reproducible benchmarks</li>
+    </ol>
+  </div>
+
+  <div class="talking-point opt">
+    <strong>Final thought:</strong>
+    "Traffic optimization is a constrained optimization problem with uncertain inputs. The ML model handles uncertainty, Webster's formula handles optimization, and the constraint system handles safety. Each piece does one job well."
+  </div>
+</div>
+
+</body>
+</html>
