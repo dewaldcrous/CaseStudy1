@@ -3,10 +3,13 @@ Smart Traffic Light Optimisation — Standalone Demo
 ===================================================
 
 Controls:
-  1/2/3  - Switch scenario (AM Rush / PM Rush / Midday)
-  I      - Toggle incident on Int 0 North
-  Space  - Pause/Resume
-  Q/Esc  - Quit
+  1/2/3    - Switch scenario (AM Rush / PM Rush / Midday)
+  I        - Toggle incident on Int 0 North
+  +/=      - Speed up (max 10x)
+  -        - Slow down (min 0.5x)
+  R        - Reset simulation
+  Space    - Pause/Resume
+  Q/Esc    - Quit
 """
 
 import sys
@@ -45,6 +48,8 @@ SCENARIOS = {
     "pm_rush": {"hour": 17, "dow": 0, "label": "PM Rush (5 PM)", "key": "2"},
     "midday": {"hour": 12, "dow": 0, "label": "Midday (12 PM)", "key": "3"},
 }
+
+SPEED_LEVELS = [0.5, 1, 2, 3, 5, 10]
 
 
 def draw_grid(ax, sim, title, title_color, LightState, incidents=None):
@@ -152,11 +157,14 @@ def main():
         'step': 0,
         'scenario': 'am_rush',
         'paused': False,
-        'incident': False,  # Incident on Int 0 North
+        'incident': False,
+        'speed_idx': 1,  # Index into SPEED_LEVELS (1 = 1x speed)
+        'total_departed_base': 0,
+        'total_departed_opt': 0,
     }
 
     # History
-    history = {k: deque(maxlen=150) for k in ['t', 'wb', 'wo', 'qb', 'qo']}
+    history = {k: deque(maxlen=200) for k in ['t', 'wb', 'wo', 'qb', 'qo', 'tb', 'to']}
 
     # Figure
     plt.style.use('dark_background')
@@ -186,39 +194,49 @@ def main():
 
     # Title and controls text
     title_text = fig.suptitle("", fontsize=13, fontweight='bold', color='white', y=0.96)
-    controls_text = fig.text(0.5, 0.99, "[1] AM Rush  [2] PM Rush  [3] Midday  |  [I] Incident  [Space] Pause  [Q] Quit",
-                             ha='center', fontsize=8, color='#888')
+    controls_text = fig.text(0.5, 0.99,
+        "[1/2/3] Scenario  [+/-] Speed  [R] Reset  [I] Incident  [Space] Pause  [Q] Quit",
+        ha='center', fontsize=8, color='#888')
+
+    # Status text (bottom left)
+    status_text = fig.text(0.05, 0.01, "", fontsize=8, color='#666')
+
+    def reset_simulation():
+        """Reset both simulators and clear history."""
+        state['step'] = 0
+        state['incident'] = False
+        state['total_departed_base'] = 0
+        state['total_departed_opt'] = 0
+        sim_base.reset()
+        sim_opt.reset()
+        for k in history:
+            history[k].clear()
 
     # Keyboard handler
     def on_key(event):
         if event.key == '1':
             state['scenario'] = 'am_rush'
-            state['step'] = 0
-            state['incident'] = False
-            sim_base.reset(); sim_opt.reset()
-            history['t'].clear(); history['wb'].clear(); history['wo'].clear()
-            history['qb'].clear(); history['qo'].clear()
+            reset_simulation()
         elif event.key == '2':
             state['scenario'] = 'pm_rush'
-            state['step'] = 0
-            state['incident'] = False
-            sim_base.reset(); sim_opt.reset()
-            history['t'].clear(); history['wb'].clear(); history['wo'].clear()
-            history['qb'].clear(); history['qo'].clear()
+            reset_simulation()
         elif event.key == '3':
             state['scenario'] = 'midday'
-            state['step'] = 0
-            state['incident'] = False
-            sim_base.reset(); sim_opt.reset()
-            history['t'].clear(); history['wb'].clear(); history['wo'].clear()
-            history['qb'].clear(); history['qo'].clear()
+            reset_simulation()
+        elif event.key == 'r':
+            reset_simulation()
+        elif event.key in ['+', '=']:
+            state['speed_idx'] = min(state['speed_idx'] + 1, len(SPEED_LEVELS) - 1)
+        elif event.key == '-':
+            state['speed_idx'] = max(state['speed_idx'] - 1, 0)
         elif event.key == 'i':
             state['incident'] = not state['incident']
-            # Apply incident to optimized sim only
             if state['incident']:
-                sim_opt.trigger_incident(0, 'north', 0.3)  # 70% capacity reduction
+                sim_opt.trigger_incident(0, 'north', 0.3)
+                sim_base.trigger_incident(0, 'north', 0.3)
             else:
                 sim_opt.clear_incident(0, 'north')
+                sim_base.clear_incident(0, 'north')
         elif event.key == ' ':
             state['paused'] = not state['paused']
         elif event.key in ['q', 'escape']:
@@ -232,9 +250,11 @@ def main():
 
         cfg = SCENARIOS[state['scenario']]
         hour, dow = cfg['hour'], cfg['dow']
+        speed = SPEED_LEVELS[state['speed_idx']]
 
-        # Simulate
-        for _ in range(3):
+        # Simulate (more steps per frame at higher speeds)
+        steps_per_frame = max(1, int(3 * speed))
+        for _ in range(steps_per_frame):
             state['step'] += 1
             rates = predict_rates(model, scaler, hour, dow, num_intersections=4)
             sim_base.step(arrival_rates=rates)
@@ -245,25 +265,48 @@ def main():
                 ql = {i.id: {d: len(q) for d, q in i.queues.items()} for i in sim_opt.intersections}
                 sim_opt.update_lights(optimizer.compute_timings(iids, predicted_rates=rates, queue_lengths=ql))
 
+        # Track throughput
+        state['total_departed_base'] = sim_base.total_departed
+        state['total_departed_opt'] = sim_opt.total_departed
+
         # Get incidents for display
         incidents = {0: {'north': state['incident']}} if state['incident'] else None
 
         # Draw grids
-        draw_grid(ax_base, sim_base, "BASELINE (Fixed 30/30)", C_BASELINE, LightState)
+        draw_grid(ax_base, sim_base, "BASELINE (Fixed 30/30)", C_BASELINE, LightState, incidents)
         draw_grid(ax_opt, sim_opt, "OPTIMIZED (Webster + ML)", C_OPT, LightState, incidents)
 
         # Improvement badge
         mb, mo = sim_base.get_metrics(), sim_opt.get_metrics()
-        imp = (mb['avg_wait_time'] - mo['avg_wait_time']) / max(mb['avg_wait_time'], 0.1) * 100
+        if mb['avg_wait_time'] > 0.1:
+            imp = (mb['avg_wait_time'] - mo['avg_wait_time']) / mb['avg_wait_time'] * 100
+        else:
+            imp = 0
         imp_col = '#2ecc71' if imp >= 15 else '#f39c12' if imp >= 0 else '#e74c3c'
-        ax_opt.text(0.5, 1.4, f"+{imp:.0f}% better", color=imp_col, fontsize=11,
+        imp_text = f"+{imp:.0f}%" if imp >= 0 else f"{imp:.0f}%"
+        ax_opt.text(0.5, 1.4, f"{imp_text} wait time", color=imp_col, fontsize=11,
                     ha='center', fontweight='bold',
                     bbox=dict(boxstyle='round,pad=0.3', fc='#1a1f2e', ec=imp_col, lw=1.5))
 
+        # Throughput comparison
+        if state['total_departed_base'] > 0:
+            tp_imp = (state['total_departed_opt'] - state['total_departed_base']) / state['total_departed_base'] * 100
+            tp_col = '#2ecc71' if tp_imp > 0 else '#e74c3c'
+            tp_text = f"+{tp_imp:.0f}%" if tp_imp >= 0 else f"{tp_imp:.0f}%"
+            ax_opt.text(0.5, 1.25, f"{tp_text} throughput ({state['total_departed_opt']} vs {state['total_departed_base']})",
+                        color=tp_col, fontsize=8, ha='center')
+
         # Update title
+        speed_str = f"{speed}x" if speed != 1 else ""
         status = " [PAUSED]" if state['paused'] else ""
-        incident_status = " | ⚠ INCIDENT Int0-N" if state['incident'] else ""
-        title_text.set_text(f"Smart Traffic Light Optimisation — {cfg['label']}{incident_status}{status}")
+        incident_status = " | ⚠ INCIDENT" if state['incident'] else ""
+        speed_display = f" [{speed_str}]" if speed_str else ""
+        title_text.set_text(f"Smart Traffic Light Optimisation — {cfg['label']}{speed_display}{incident_status}{status}")
+
+        # Update status text
+        sim_time = state['step']  # Each step is ~1 second
+        mins, secs = divmod(sim_time, 60)
+        status_text.set_text(f"Sim Time: {mins:02d}:{secs:02d} | Step: {state['step']} | Speed: {speed}x")
 
         # Update history
         history['t'].append(state['step'])
@@ -288,12 +331,15 @@ def main():
         return []
 
     print("\n  Controls:")
-    print("    [1/2/3] Switch scenario")
-    print("    [I] Toggle incident")
+    print("    [1/2/3] Switch scenario (AM Rush / PM Rush / Midday)")
+    print("    [+/=]   Speed up simulation")
+    print("    [-]     Slow down simulation")
+    print("    [R]     Reset simulation")
+    print("    [I]     Toggle incident on Int 0")
     print("    [Space] Pause/Resume")
-    print("    [Q] Quit\n")
+    print("    [Q]     Quit\n")
 
-    ani = FuncAnimation(fig, update, interval=60, blit=False, cache_frame_data=False)
+    ani = FuncAnimation(fig, update, interval=50, blit=False, cache_frame_data=False)
     plt.show()
 
 
