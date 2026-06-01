@@ -107,20 +107,52 @@ solution/
 ├── demo.html              # ← Interactive browser visualization (START HERE)
 ├── project_overview.html  # ← Full technical documentation
 ├── presenter_guide.html   # ← Presentation guide
-├── run_demo.py            # Standalone Python demo (smooth animation)
-├── run_demo.bat           # Batch launcher for Python demo
-├── build_exe.py           # Build standalone .exe with PyInstaller
-├── main.py                # ML pipeline orchestrator
-├── dashboard.py           # Streamlit dashboard
-├── ml_model.js            # ML predictions for demo.html
-├── src/
-│   ├── simulator.py       # Connected network simulation
-│   ├── ml_model.py        # LightGBM traffic prediction
-│   ├── optimizer.py       # Webster's formula + controllers
-│   ├── live_viz.py        # Matplotlib animation
-│   └── model_validation.py
-├── models/                # Saved ML models
-└── figures/               # Generated charts
+├── run_demo.py            # Standalone Python demo with GUI controls
+├── main.py                # Full ML pipeline orchestrator
+├── ml_model.js            # ML predictions exported for demo.html
+│
+├── dist/                  # ← STANDALONE EXECUTABLE
+│   └── TrafficDemo.exe    # Windows executable (~150MB) - runs without Python
+│
+├── scripts/               # Utility scripts (not needed for demos)
+│   ├── build_exe.py       # PyInstaller build script
+│   ├── run_demo.bat       # Batch launcher
+│   ├── dashboard.py       # Streamlit dashboard (alternative UI)
+│   ├── generate_diagrams.py
+│   └── save_demos.py
+│
+├── src/                   # Core Python modules
+│   ├── simulator.py       # Connected network simulation engine
+│   ├── ml_model.py        # LightGBM traffic demand prediction
+│   ├── optimizer.py       # Webster's formula + controller logic
+│   ├── live_viz.py        # Matplotlib animation renderer
+│   └── model_validation.py # SHAP, Gini, residuals analysis
+│
+├── models/                # Saved trained models (.pkl)
+└── figures/               # Generated analysis charts
+```
+
+### dist/TrafficDemo.exe — Standalone Executable
+
+The `dist/` folder contains a **standalone Windows executable** that bundles:
+- Python 3.x runtime (embedded)
+- All dependencies (numpy, matplotlib, LightGBM, etc.)
+- Trained ML model (`models/best_model.pkl`)
+- Full simulation engine (`src/simulator.py`, `src/optimizer.py`)
+
+**How it works:**
+1. PyInstaller packages `run_demo.py` + all imports into a single .exe
+2. On launch, it extracts to a temp folder and runs the Python interpreter
+3. Loads the **actual trained LightGBM model** (not a JS approximation)
+4. Runs the same Webster optimizer + 70/30 ML-queue hybrid as `main.py`
+
+**To run:** Double-click `dist/TrafficDemo.exe` — no Python installation required.
+
+**To rebuild:**
+```bash
+cd solution/scripts
+python build_exe.py
+# Output: ../dist/TrafficDemo.exe
 ```
 
 ---
