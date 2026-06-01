@@ -90,8 +90,8 @@
       <b>ML Model:</b> <span id="ml-status-text">Checking...</span>
     </div>
 
-    <div style="background:#2a1e1e;border-radius:6px;padding:8px;border-left:3px solid #f59e0b;font-size:.68em;color:#fcd34d;line-height:1.3">
-      <b>Model Note:</b> Each intersection simulates independent Poisson arrivals. Vehicles depart but don't travel between intersections (steady-state assumption).
+    <div style="background:#1e2a2e;border-radius:6px;padding:8px;border-left:3px solid #4fc3f7;font-size:.68em;color:#a8d8ea;line-height:1.3">
+      <b>Network Model:</b> Vehicles enter at edge approaches, travel through the 2×2 grid, and exit at opposite edges. Color-coded by origin intersection.
     </div>
 
     <div>
@@ -181,21 +181,31 @@
         <canvas id="canvas-opt" class="grid-canvas"></canvas>
         <div class="grid-footer">
           Queue: <b id="opt-q">0</b> | Wait: <b id="opt-w">0s</b> | <b id="imp-badge" style="color:#2ecc71">+0%</b>
-          <br><span style="color:#4fc3f7">Green: NS <b id="opt-ns">30</b>s (<b id="opt-ns-pct">50</b>%) | EW <b id="opt-ew">30</b>s (<b id="opt-ew-pct">50</b>%)</span>
+        </div>
+        <!-- Per-intersection timing splits -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;font-size:0.65em;background:#0d1520;padding:6px;border-radius:4px;border:1px solid #1e3a5f">
+          <div style="text-align:center;padding:3px;background:#1a2433;border-radius:3px;border-left:3px solid #9b59b6">
+            <span style="color:#9b59b6;font-weight:bold">Int 0</span><br>
+            <span style="color:#4fc3f7">NS:<b id="t0-ns">30</b>s EW:<b id="t0-ew">30</b>s</span>
+          </div>
+          <div style="text-align:center;padding:3px;background:#1a2433;border-radius:3px;border-left:3px solid #fff">
+            <span style="color:#fff;font-weight:bold">Int 1</span><br>
+            <span style="color:#4fc3f7">NS:<b id="t1-ns">30</b>s EW:<b id="t1-ew">30</b>s</span>
+          </div>
+          <div style="text-align:center;padding:3px;background:#1a2433;border-radius:3px;border-left:3px solid #2c3e50">
+            <span style="color:#95a5a6;font-weight:bold">Int 2</span><br>
+            <span style="color:#4fc3f7">NS:<b id="t2-ns">30</b>s EW:<b id="t2-ew">30</b>s</span>
+          </div>
+          <div style="text-align:center;padding:3px;background:#1a2433;border-radius:3px;border-left:3px solid #f39c12">
+            <span style="color:#f39c12;font-weight:bold">Int 3</span><br>
+            <span style="color:#4fc3f7">NS:<b id="t3-ns">30</b>s EW:<b id="t3-ew">30</b>s</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Legend -->
     <div style="background:#1a3d1a;border-radius:6px;padding:6px 12px;display:flex;flex-wrap:wrap;justify-content:center;gap:14px;font-size:.7em;border:1px solid #2a5a2a">
-      <div style="display:flex;align-items:center;gap:4px">
-        <span style="display:inline-block;width:10px;height:6px;background:#4ade80;border-radius:2px"></span>
-        <span style="color:#4ade80">Car (can go)</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:4px">
-        <span style="display:inline-block;width:10px;height:6px;background:#f87171;border-radius:2px"></span>
-        <span style="color:#f87171">Car (waiting)</span>
-      </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="display:inline-block;width:8px;height:8px;background:#00ff00;border-radius:50%"></span>
         <span style="color:#aaa">Green light</span>
@@ -204,7 +214,24 @@
         <span style="display:inline-block;width:8px;height:8px;background:#ff0000;border-radius:50%"></span>
         <span style="color:#aaa">Red light</span>
       </div>
-      <div style="color:#778">+N = more cars queued</div>
+      <div style="color:#778">|</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="display:inline-block;width:12px;height:6px;background:#9b59b6;border-radius:2px;border:1px solid #fff"></span>
+        <span style="color:#9b59b6">Int 0</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="display:inline-block;width:12px;height:6px;background:#ffffff;border-radius:2px;border:1px solid #666"></span>
+        <span style="color:#fff">Int 1</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="display:inline-block;width:12px;height:6px;background:#2c3e50;border-radius:2px;border:1px solid #fff"></span>
+        <span style="color:#aaa">Int 2</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="display:inline-block;width:12px;height:6px;background:#f39c12;border-radius:2px;border:1px solid #fff"></span>
+        <span style="color:#f39c12">Int 3</span>
+      </div>
+      <div style="color:#778">+N = more cars</div>
     </div>
   </div>
 
@@ -224,6 +251,7 @@
     <span><b>Hour:</b> <span id="sb-hour">8</span>:00</span>
     <span><b>Departed:</b> <span id="sb-dep">0</span></span>
     <span><b>Queue:</b> <span id="sb-q">0</span></span>
+    <span><b>In-Transit:</b> <span id="sb-transit">0</span></span>
     <span id="sb-inc"></span>
   </div>
 </div>
@@ -237,6 +265,35 @@ const SATURATION = 0.5;
 const DT = 1.0;
 const DIRECTIONS = ['north','south','east','west'];
 const DIRECTION_ID_MAP = {north:0, south:1, east:2, west:3};
+const TRAVEL_TIME = 2.0;  // seconds to travel between intersections
+
+// Origin colors - vehicles colored by entry intersection
+const ORIGIN_COLORS = {
+  0: '#9b59b6',  // Purple - Int 0 (top-left)
+  1: '#ffffff',  // White - Int 1 (top-right)
+  2: '#2c3e50',  // Black/Dark Slate - Int 2 (bottom-left)
+  3: '#f39c12',  // Orange - Int 3 (bottom-right)
+};
+
+// Network topology for 2x2 grid
+// Maps (intersection, direction) -> next_intersection (null = exit)
+const NETWORK_GRAPH = {
+  '0,north': null, '0,west': null, '0,south': 2, '0,east': 1,
+  '1,north': null, '1,east': null, '1,south': 3, '1,west': 0,
+  '2,south': null, '2,west': null, '2,north': 0, '2,east': 3,
+  '3,south': null, '3,east': null, '3,north': 1, '3,west': 2,
+};
+
+// Edge approaches (where vehicles can enter the network)
+const EDGE_APPROACHES = {
+  0: ['north', 'west'],
+  1: ['north', 'east'],
+  2: ['south', 'west'],
+  3: ['south', 'east'],
+};
+
+// Opposite directions for arrival calculation
+const OPPOSITE_DIR = {north:'south', south:'north', east:'west', west:'east'};
 
 // Current weather state (0=clear, 1=cloudy, 2=rain)
 let currentWeather = 0;
@@ -346,6 +403,57 @@ class TrafficSimulator {
     // Track recent arrivals and departures for animation
     this.recentArrivals = {};  // {intId: {dir: count}}
     this.recentDepartures = {}; // {intId: {dir: count}}
+    // Network routing - vehicles traveling between intersections
+    this.travelingVehicles = [];
+  }
+
+  // Generate random route from entry to exit
+  generateRoute(entryInt, entryDir) {
+    const travelDir = OPPOSITE_DIR[entryDir];
+    const route = [entryInt];
+    let currentInt = entryInt;
+    const visited = new Set([entryInt]);
+    let currentTravelDir = travelDir;
+
+    for (let hop = 0; hop < 10; hop++) {
+      const possibleMoves = [];
+      for (const dir of DIRECTIONS) {
+        const key = `${currentInt},${dir}`;
+        const nextInt = NETWORK_GRAPH[key];
+        if (nextInt !== undefined && !visited.has(nextInt)) {
+          possibleMoves.push({dir, nextInt});
+        }
+      }
+      if (possibleMoves.length === 0) break;
+
+      // 80% bias toward straight-through
+      const straightMoves = possibleMoves.filter(m => m.dir === currentTravelDir);
+      let chosen;
+      if (straightMoves.length > 0 && Math.random() < 0.8) {
+        chosen = straightMoves[0];
+      } else {
+        chosen = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+      }
+
+      if (chosen.nextInt === null) break;  // Exit network
+
+      route.push(chosen.nextInt);
+      visited.add(chosen.nextInt);
+      currentInt = chosen.nextInt;
+      currentTravelDir = chosen.dir;
+    }
+    return route;
+  }
+
+  // Get arrival direction when traveling from one intersection to another
+  getArrivalDirection(fromInt, toInt) {
+    for (const dir of DIRECTIONS) {
+      const key = `${fromInt},${dir}`;
+      if (NETWORK_GRAPH[key] === toInt) {
+        return OPPOSITE_DIR[dir];
+      }
+    }
+    return 'north';
   }
 
   updateLights(timings) {
@@ -361,13 +469,37 @@ class TrafficSimulator {
     this.recentArrivals = {};
     for (const inter of this.intersections) {
       this.recentArrivals[inter.id] = {};
+      const edgeDirs = EDGE_APPROACHES[inter.id] || [];
+
       for (const dir of DIRECTIONS) {
-        // Arrivals are NOT affected by incidents - vehicles still arrive normally
+        // Only spawn at edge approaches (network entry points)
+        if (!edgeDirs.includes(dir)) {
+          this.recentArrivals[inter.id][dir] = 0;
+          continue;
+        }
+
         let rate = (arrivalRates[inter.id] || {})[dir] || 0.03;
+
+        // Apply incident capacity reduction to arrivals (lane blockage reduces inflow)
+        const inc = (this.incidents[inter.id] || {})[dir];
+        if (inc !== undefined) {
+          rate *= inc;
+        }
+
         const n = poisson(rate * DT);
         this.recentArrivals[inter.id][dir] = n;
         for (let k=0; k<n; k++) {
-          inter.queues[dir].push({id: this.vidCtr++, wait: 0});
+          const route = this.generateRoute(inter.id, dir);
+          inter.queues[dir].push({
+            id: this.vidCtr++,
+            wait: 0,
+            route: route,
+            originInt: inter.id,
+            routeIdx: 0,
+            state: 'queued',
+            travelStartTime: 0,
+            arrivalDir: null
+          });
         }
       }
     }
@@ -390,9 +522,23 @@ class TrafficSimulator {
           const nDep = Math.min(q.length, Math.floor(satFlow * DT + Math.random()));
           const departed = q.splice(0, nDep);
           this.recentDepartures[inter.id][dir] = nDep;
+
           for (const v of departed) {
             this.totalWait += v.wait;
-            this.totalDep++;
+            v.wait = 0;  // Reset for next intersection
+
+            // Route to next intersection or exit network
+            if (v.route && v.routeIdx < v.route.length - 1) {
+              v.routeIdx++;
+              const nextIntId = v.route[v.routeIdx];
+              v.state = 'traveling';
+              v.travelStartTime = this.time;
+              v.arrivalDir = this.getArrivalDirection(inter.id, nextIntId);
+              this.travelingVehicles.push(v);
+            } else {
+              // Vehicle exits the network
+              this.totalDep++;
+            }
           }
         }
       }
@@ -412,7 +558,32 @@ class TrafficSimulator {
         }
       }
     }
+
+    // Process traveling vehicles
+    this.processTravelingVehicles();
+
     this.time += DT;
+  }
+
+  processTravelingVehicles() {
+    const arrived = [];
+    for (const v of this.travelingVehicles) {
+      if (this.time >= v.travelStartTime + TRAVEL_TIME) {
+        // Vehicle arrives at next intersection
+        if (v.route && v.routeIdx < v.route.length) {
+          const nextInt = this.intersections[v.route[v.routeIdx]];
+          if (v.arrivalDir && nextInt) {
+            nextInt.queues[v.arrivalDir].push(v);
+          }
+          v.state = 'queued';
+        }
+        arrived.push(v);
+      }
+    }
+    for (const v of arrived) {
+      const idx = this.travelingVehicles.indexOf(v);
+      if (idx > -1) this.travelingVehicles.splice(idx, 1);
+    }
   }
 
   getMetrics() {
@@ -760,32 +931,42 @@ function drawGrid(sim, canvasId) {
     drawTrafficLight(cx + lightOff, cy, !isNSGreen, -Math.PI/2); // East
     drawTrafficLight(cx - lightOff, cy, !isNSGreen, Math.PI/2);  // West
 
-    // Draw car helper
-    function drawCar(x, y, rot, col) {
+    // Draw car helper - now uses origin color
+    function drawCar(x, y, rot, v, defaultCol) {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rot);
+      // Use origin color if vehicle has it, otherwise default
+      const col = (v && v.originInt !== undefined) ? (ORIGIN_COLORS[v.originInt] || defaultCol) : defaultCol;
       ctx.fillStyle = col;
       ctx.beginPath();
       ctx.roundRect(-carW/2, -carH/2, carW, carH, 2);
       ctx.fill();
-      ctx.fillStyle = '#5af';
-      ctx.fillRect(-carW/2+1, -carH/2+1.5, carW-2, 2.5);
+      // White border for visibility
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
       ctx.restore();
     }
 
     const nsCol = isNSGreen ? '#4f8' : '#f66';
     const ewCol = !isNSGreen ? '#4f8' : '#f66';
 
-    // Draw queued cars (max 2 per direction to keep it clean)
-    for (let i = 0; i < Math.min(ql.north || 0, maxCars); i++)
-      drawCar(cx + laneW/2, cy - roadW/2 - carGap*(i+0.6), 0, nsCol);
-    for (let i = 0; i < Math.min(ql.south || 0, maxCars); i++)
-      drawCar(cx - laneW/2, cy + roadW/2 + carGap*(i+0.6), Math.PI, nsCol);
-    for (let i = 0; i < Math.min(ql.east || 0, maxCars); i++)
-      drawCar(cx + roadW/2 + carGap*(i+0.6), cy + laneW/2, -Math.PI/2, ewCol);
-    for (let i = 0; i < Math.min(ql.west || 0, maxCars); i++)
-      drawCar(cx - roadW/2 - carGap*(i+0.6), cy - laneW/2, Math.PI/2, ewCol);
+    // Get queued vehicles (not just counts)
+    const qNorth = inter.queues.north || [];
+    const qSouth = inter.queues.south || [];
+    const qEast = inter.queues.east || [];
+    const qWest = inter.queues.west || [];
+
+    // Draw queued cars with origin colors (max 2 per direction)
+    for (let i = 0; i < Math.min(qNorth.length, maxCars); i++)
+      drawCar(cx + laneW/2, cy - roadW/2 - carGap*(i+0.6), 0, qNorth[i], nsCol);
+    for (let i = 0; i < Math.min(qSouth.length, maxCars); i++)
+      drawCar(cx - laneW/2, cy + roadW/2 + carGap*(i+0.6), Math.PI, qSouth[i], nsCol);
+    for (let i = 0; i < Math.min(qEast.length, maxCars); i++)
+      drawCar(cx + roadW/2 + carGap*(i+0.6), cy + laneW/2, -Math.PI/2, qEast[i], ewCol);
+    for (let i = 0; i < Math.min(qWest.length, maxCars); i++)
+      drawCar(cx - roadW/2 - carGap*(i+0.6), cy - laneW/2, Math.PI/2, qWest[i], ewCol);
 
     // Queue overflow indicators
     ctx.font = 'bold 9px sans-serif';
@@ -797,31 +978,138 @@ function drawGrid(sim, canvasId) {
     if ((ql.east||0) > maxCars) ctx.fillText('+'+(ql.east-maxCars), cx+oD, cy+laneW/2);
     if ((ql.west||0) > maxCars) ctx.fillText('+'+(ql.west-maxCars), cx-oD, cy-laneW/2);
 
-    // Total car count badge at intersection (light blue to avoid confusion with traffic lights)
-    const totalCars = (ql.north||0) + (ql.south||0) + (ql.east||0) + (ql.west||0);
-    const badgeX = cx + roadW/2 + 22;
-    const badgeY = cy - roadW/2 - 14;
+    // Count cars by origin intersection
+    const originCounts = {0: 0, 1: 0, 2: 0, 3: 0};
+    for (const dir of DIRECTIONS) {
+      for (const v of inter.queues[dir] || []) {
+        const orig = v.originInt !== undefined ? v.originInt : idx;
+        if (orig in originCounts) originCounts[orig]++;
+      }
+    }
+    const totalCars = originCounts[0] + originCounts[1] + originCounts[2] + originCounts[3];
 
-    // Badge background - light blue
-    ctx.fillStyle = '#0ea5e9';
+    // Badge position - moved up and to the side (out of road)
+    const badgeX = cx + roadW + 35;
+    const badgeY = cy - roadW - 25;
+
+    // Badge background - dark panel
+    ctx.fillStyle = '#1a1f2e';
+    ctx.globalAlpha = 0.92;
     ctx.beginPath();
-    ctx.roundRect(badgeX - 20, badgeY - 10, 40, 20, 6);
+    ctx.roundRect(badgeX - 30, badgeY - 12, 60, 38, 6);
     ctx.fill();
+    ctx.globalAlpha = 1;
 
     // Badge border
-    ctx.strokeStyle = '#fff';
+    ctx.strokeStyle = '#4fc3f7';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Badge text showing total cars
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px sans-serif';
+    // Total count header
+    ctx.fillStyle = '#4fc3f7';
+    ctx.font = 'bold 9px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(totalCars + ' cars', badgeX, badgeY);
+    ctx.fillText(totalCars + ' cars', badgeX, badgeY - 2);
+
+    // Draw mini car icons with counts (2x2 grid)
+    const carPositions = [
+      {x: badgeX - 14, y: badgeY + 12, id: 0},  // Purple (Int 0)
+      {x: badgeX + 14, y: badgeY + 12, id: 1},  // White (Int 1)
+      {x: badgeX - 14, y: badgeY + 24, id: 2},  // Black (Int 2)
+      {x: badgeX + 14, y: badgeY + 24, id: 3},  // Orange (Int 3)
+    ];
+    for (const cp of carPositions) {
+      // Mini car shape (rounded rectangle)
+      ctx.fillStyle = ORIGIN_COLORS[cp.id];
+      ctx.beginPath();
+      ctx.roundRect(cp.x - 12, cp.y - 4, 10, 6, 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      // Count next to car
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(originCounts[cp.id], cp.x + 1, cp.y + 2);
+    }
   }
 
-  // Debug: draw canvas bounds and intersection markers
+  // Draw traveling vehicles on roads between intersections (car shapes)
+  for (const v of sim.travelingVehicles || []) {
+    if (!v.route || v.routeIdx < 1) continue;
+
+    // Calculate progress along the road
+    const progress = Math.min(Math.max((sim.time - v.travelStartTime) / TRAVEL_TIME, 0), 1);
+
+    // Get start and end intersection positions
+    const prevIntId = v.route[v.routeIdx - 1];
+    const currIntId = v.route[v.routeIdx];
+    const prevPos = positions[prevIntId];
+    const currPos = positions[currIntId];
+    if (!prevPos || !currPos) continue;
+
+    // Interpolate position
+    const vx = prevPos.x + (currPos.x - prevPos.x) * progress;
+    const vy = prevPos.y + (currPos.y - prevPos.y) * progress;
+
+    // Determine car rotation based on travel direction
+    const dx = currPos.x - prevPos.x;
+    const dy = currPos.y - prevPos.y;
+    const angle = Math.atan2(dy, dx);
+
+    // Draw car shape (rounded rectangle) with rotation
+    const originCol = ORIGIN_COLORS[v.originInt] || '#888';
+    ctx.save();
+    ctx.translate(vx, vy);
+    ctx.rotate(angle);
+    ctx.fillStyle = originCol;
+    ctx.beginPath();
+    ctx.roundRect(-6, -3, 12, 6, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Windshield detail
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(2, -2, 3, 4);
+    ctx.restore();
+  }
+
+  // Draw origin color legend
+  const legendX = offsetX + size - 70;
+  const legendY = offsetY + 15;
+  ctx.fillStyle = '#222';
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(legendX - 5, legendY - 10, 75, 75);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#aaa';
+  ctx.font = 'bold 8px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Origin:', legendX, legendY);
+
+  const intLabels = ['Int 0', 'Int 1', 'Int 2', 'Int 3'];
+  for (let i = 0; i < 4; i++) {
+    const ly = legendY + 12 + i * 15;
+    // Car shape instead of circle
+    ctx.fillStyle = ORIGIN_COLORS[i];
+    ctx.beginPath();
+    ctx.roundRect(legendX, ly - 4, 12, 7, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Windshield detail
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(legendX + 7, ly - 3, 3, 5);
+    // Label
+    ctx.fillStyle = '#ccc';
+    ctx.font = '8px sans-serif';
+    ctx.fillText(intLabels[i], legendX + 18, ly + 3);
+  }
+
+  // Debug: draw canvas bounds
   ctx.strokeStyle = '#333';
   ctx.lineWidth = 1;
   ctx.strokeRect(1, 1, W-2, H-2);
@@ -884,6 +1172,7 @@ function updateKPIs() {
   document.getElementById('sb-hour').textContent = hour;
   document.getElementById('sb-dep').textContent = mo.totalDep;
   document.getElementById('sb-q').textContent = mo.totalQ;
+  document.getElementById('sb-transit').textContent = (simOpt.travelingVehicles || []).length;
 
   // Grid stats
   document.getElementById('base-q').textContent = mb.totalQ;
@@ -894,22 +1183,13 @@ function updateKPIs() {
   badge.textContent = imp >= 0 ? '+'+imp.toFixed(0)+'%' : imp.toFixed(0)+'%';
   badge.style.color = imp >= 20 ? '#2ecc71' : imp >= 0 ? '#f39c12' : '#e74c3c';
 
-  // Green time display (average across all 4 intersections for simplicity)
-  if (simOpt.intersections.length > 0) {
-    let totalNS = 0, totalEW = 0;
-    for (const inter of simOpt.intersections) {
-      totalNS += inter.nsGreen;
-      totalEW += inter.ewGreen;
-    }
-    const avgNS = totalNS / simOpt.intersections.length;
-    const avgEW = totalEW / simOpt.intersections.length;
-    const cycle = avgNS + avgEW;
-    const nsPct = cycle > 0 ? Math.round(avgNS / cycle * 100) : 50;
-    const ewPct = cycle > 0 ? Math.round(avgEW / cycle * 100) : 50;
-    document.getElementById('opt-ns').textContent = Math.round(avgNS);
-    document.getElementById('opt-ew').textContent = Math.round(avgEW);
-    document.getElementById('opt-ns-pct').textContent = nsPct;
-    document.getElementById('opt-ew-pct').textContent = ewPct;
+  // Per-intersection green time display (each intersection optimizes independently)
+  for (let i = 0; i < simOpt.intersections.length; i++) {
+    const inter = simOpt.intersections[i];
+    const nsEl = document.getElementById('t' + i + '-ns');
+    const ewEl = document.getElementById('t' + i + '-ew');
+    if (nsEl) nsEl.textContent = Math.round(inter.nsGreen);
+    if (ewEl) ewEl.textContent = Math.round(inter.ewGreen);
   }
 
   // Time indicator - smooth movement based on seconds
@@ -928,6 +1208,8 @@ function updateKPIs() {
 function updateWhatsHappening(hour, mb, mo, imp) {
   let html = '';
   const usingML = typeof mlPredict === 'function';
+  const inTransit = (simOpt && simOpt.travelingVehicles) ? simOpt.travelingVehicles.length : 0;
+
   if (step === 0) {
     html = 'Press <b>Start</b> to begin';
   } else {
@@ -935,15 +1217,18 @@ function updateWhatsHappening(hour, mb, mo, imp) {
     if (usingML) {
       html = '<span style="color:#2ecc71;font-size:.9em">🤖 ML predictions active</span><br>';
     }
+    // Show network status
+    html += '<span style="color:#4fc3f7;font-size:.85em">🚗 ' + inTransit + ' vehicles in transit</span><br>';
+
     if (hour >= 7 && hour <= 9) {
-      html += '<span style="color:#ff6b6b"><b>AM Rush</b></span> — NS demand 3-4x higher than EW<br>';
+      html += '<span style="color:#ff6b6b"><b>AM Rush</b></span> — NS demand 3-4x higher<br>';
     } else if (hour >= 16 && hour <= 19) {
       html += '<span style="color:#f39c12"><b>PM Rush</b></span> — EW demand 2-3x higher<br>';
     } else {
       html += '<span style="color:#3498db"><b>Off-peak</b></span> — Balanced demand<br>';
     }
     if (imp >= 20) {
-      html += '<span style="color:#2ecc71"><b>Target met!</b></span> ' + imp.toFixed(0) + '% improvement';
+      html += '<span style="color:#2ecc71"><b>Target met!</b></span> ' + imp.toFixed(0) + '%';
     } else if (imp > 0) {
       html += 'Improvement: ' + imp.toFixed(0) + '%';
     }
