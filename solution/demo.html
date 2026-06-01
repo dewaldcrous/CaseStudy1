@@ -888,59 +888,6 @@ function drawGrid(sim, canvasId) {
     ctx.textBaseline = 'middle';
     ctx.fillText(idx, cx, cy);
 
-    // Incident: direction indicator on blocked approach
-    if (hasIncident && incidentDir) {
-      const barrierOffset = roadW/2 + 18;
-      let bx = cx, by = cy;
-      let isVertical = false;
-
-      if (incidentDir === 'north') { bx = cx; by = cy - barrierOffset; isVertical = true; }
-      else if (incidentDir === 'south') { bx = cx; by = cy + barrierOffset; isVertical = true; }
-      else if (incidentDir === 'east') { bx = cx + barrierOffset; by = cy; }
-      else if (incidentDir === 'west') { bx = cx - barrierOffset; by = cy; }
-
-      // Orange/white striped barrier (construction style)
-      ctx.save();
-      const bw = isVertical ? 14 : 6;
-      const bh = isVertical ? 6 : 14;
-
-      // Orange background
-      ctx.fillStyle = '#ff6600';
-      ctx.fillRect(bx - bw/2, by - bh/2, bw, bh);
-
-      // White stripes
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      if (isVertical) {
-        ctx.moveTo(bx - 5, by - 2); ctx.lineTo(bx - 2, by + 2);
-        ctx.moveTo(bx, by - 2); ctx.lineTo(bx + 3, by + 2);
-        ctx.moveTo(bx + 5, by - 2); ctx.lineTo(bx + 8, by + 2);
-      } else {
-        ctx.moveTo(bx - 2, by - 5); ctx.lineTo(bx + 2, by - 2);
-        ctx.moveTo(bx - 2, by); ctx.lineTo(bx + 2, by + 3);
-        ctx.moveTo(bx - 2, by + 5); ctx.lineTo(bx + 2, by + 8);
-      }
-      ctx.stroke();
-
-      // Border
-      ctx.strokeStyle = '#cc5500';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bx - bw/2, by - bh/2, bw, bh);
-      ctx.restore();
-
-      // Direction label
-      ctx.fillStyle = '#ffcc00';
-      ctx.font = 'bold 8px sans-serif';
-      ctx.textAlign = 'center';
-      const labelOffset = isVertical ? (incidentDir === 'north' ? -10 : 10) : (incidentDir === 'west' ? -12 : 12);
-      if (isVertical) {
-        ctx.fillText(incidentDir.charAt(0).toUpperCase(), bx, by + labelOffset);
-      } else {
-        ctx.fillText(incidentDir.charAt(0).toUpperCase(), bx + labelOffset, by + 3);
-      }
-    }
-
     // Traffic light helper - draws a proper traffic light symbol
     function drawTrafficLight(x, y, isGreen, rotation) {
       ctx.save();
@@ -1173,6 +1120,50 @@ function drawGrid(sim, canvasId) {
     ctx.fillText(intLabels[i], legendX + 18, ly + 3);
   }
 
+  // Draw incident indicators ON TOP of everything (last to render)
+  for (let idx = 0; idx < 4; idx++) {
+    const hasIncident = sim.incidents && sim.incidents[idx] && Object.keys(sim.incidents[idx]).length > 0;
+    if (!hasIncident) continue;
+
+    const incidentDir = Object.keys(sim.incidents[idx])[0];
+    const pos = positions[idx];
+    const cx = pos.x, cy = pos.y;
+
+    // Flashing red X on the blocked direction
+    const offset = roadW/2 + 25;
+    let bx = cx, by = cy;
+
+    if (incidentDir === 'north') { by = cy - offset; }
+    else if (incidentDir === 'south') { by = cy + offset; }
+    else if (incidentDir === 'east') { bx = cx + offset; }
+    else if (incidentDir === 'west') { bx = cx - offset; }
+
+    // Red circle with X
+    ctx.fillStyle = '#ff3333';
+    ctx.beginPath();
+    ctx.arc(bx, by, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // X mark
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(bx - 4, by - 4);
+    ctx.lineTo(bx + 4, by + 4);
+    ctx.moveTo(bx + 4, by - 4);
+    ctx.lineTo(bx - 4, by + 4);
+    ctx.stroke();
+
+    // Direction label below
+    ctx.fillStyle = '#ff3333';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(incidentDir.toUpperCase(), bx, by + 18);
+  }
+
   // Debug: draw canvas bounds
   ctx.strokeStyle = '#333';
   ctx.lineWidth = 1;
@@ -1196,19 +1187,7 @@ function drawChart(canvasId, dataA, dataB, title) {
 
   const n = Math.max(dataA.length, dataB.length);
   if (n < 2) return;
-  // Cap max value to prevent extreme distortion during incidents
-  // Use 90th percentile of data if max is way higher (extreme outliers)
-  const allData = [...dataA, ...dataB].filter(v => v > 0);
-  let mx;
-  if (allData.length > 10) {
-    const sorted = allData.slice().sort((a,b) => a-b);
-    const p90 = sorted[Math.floor(sorted.length * 0.9)];
-    const rawMax = Math.max(...allData, 0.01);
-    // If max is more than 3x the 90th percentile, cap it
-    mx = (rawMax > p90 * 3) ? p90 * 2 : rawMax * 1.1;
-  } else {
-    mx = Math.max(...dataA, ...dataB, 0.01) * 1.1;
-  }
+  const mx = Math.max(...dataA, ...dataB, 0.01) * 1.1;
 
   // Grid
   ctx.strokeStyle='#2a3050'; ctx.lineWidth=0.5;
