@@ -19,6 +19,61 @@ Sections
   6.  Full simulation & comparison  — baseline vs optimizer × best model
   7.  Scenario benchmark            — when the 20% target is and isn't met
 
+Key Design Decisions & Reasoning
+---------------------------------
+WHY WEBSTER'S FORMULA (not Deep RL or SCOOT)?
+  - Webster (1958) is mathematically proven optimal for isolated intersections
+  - Requires only flow ratios as input — perfect fit for ML demand prediction
+  - Interpretable: operators can verify the logic; regulators can audit it
+  - Deep RL would need millions of training episodes and is a black box
+  - SCOOT/SCATS require proprietary hardware and real sensor infrastructure
+
+WHY LIGHTGBM (typically wins over other models)?
+  - Handles categorical features natively (intersection_id, direction)
+  - Robust to feature scaling — no StandardScaler needed
+  - Leaf-wise tree growth captures hour×direction interactions efficiently
+  - 10-20x faster training than sklearn GradientBoosting
+
+WHY 70% ML + 30% QUEUE FEEDBACK (hybrid approach)?
+  - Pure ML relies on predictions being accurate — fails during incidents
+  - Pure queue feedback is reactive only — can't anticipate demand shifts
+  - Hybrid: ML provides proactive timing; queue feedback corrects errors in real-time
+  - 70/30 ratio chosen empirically: enough ML to be proactive, enough feedback to recover
+
+WHY CYCLIC ENCODING (sin/cos) for hour?
+  - One-hot encoding (24 columns) causes overfitting and treats 23:00/00:00 as distant
+  - Linear encoding (hour=0..23) has same discontinuity problem
+  - Cyclic encoding: hour_sin + hour_cos = 2 columns, 23:00 is adjacent to 00:00
+  - Validated via cross-validation: cyclic achieves same accuracy with 22 fewer features
+
+Known Limitations & Shortcomings
+---------------------------------
+1. SYNTHETIC DATA — trained on rule-based patterns, not real sensor data
+   - Real traffic has incidents, events, construction that rules don't capture
+   - Model may underperform on edge cases not in training distribution
+
+2. ISOLATED INTERSECTION OPTIMIZATION — no corridor coordination
+   - Webster optimizes each intersection independently
+   - Doesn't implement "green wave" synchronization for arterial roads
+   - Vehicles stopping at one intersection may hit red at the next
+
+3. FIXED SATURATION FLOW (0.5 veh/s) — assumes uniform capacity
+   - Real intersections vary: turn lanes, lane widths, pedestrian phases
+   - Model doesn't adapt to lane closures or capacity changes
+
+4. TWO-PHASE SIGNAL ONLY — NS/EW exclusive phases
+   - No dedicated left-turn phases or pedestrian-only phases
+   - Real intersections often have 4-8 phases with complex sequencing
+
+5. NO PEDESTRIAN/CYCLIST MODELING
+   - Simulation only tracks motor vehicles
+   - Pedestrian push-buttons would add minimum green constraints
+
+6. 20% IMPROVEMENT TARGET — not always achievable
+   - Low-demand periods: baseline already clears queues → minimal room for improvement
+   - Symmetric demand: 50/50 split is already optimal → only cycle length helps
+   - Target is met primarily during asymmetric rush hours
+
 Run:
     python main.py            # full pipeline + charts
     python main.py benchmark  # scenario sweep only
@@ -35,6 +90,8 @@ if hasattr(sys.stdout, "reconfigure"):
 
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')  # Non-GUI backend - avoids tkinter threading issues in VS Code
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
@@ -56,17 +113,35 @@ from src.optimizer         import (FixedTimingController, WebsterOptimizer,
                              SATURATION_FLOW, MIN_GREEN, MAX_CYCLE)
 
 # ================================================================== #
-#  Global config                                                       #
+#  Global config — each value has a reasoning comment                  #
 # ================================================================== #
 import os
 FIGURES_DIR          = "figures"
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
+# WHY 4 INTERSECTIONS? — 2×2 grid is the minimum network that demonstrates:
+#   - Vehicle routing between intersections (not just isolated signals)
+#   - Queue spillback effects (one intersection's queue affects neighbors)
+#   - Coordination challenges (without needing complex corridor logic)
 NUM_INTERSECTIONS    = 4
+
+# WHY 1 HOUR? — Long enough to see queue buildup/clearance cycles (~5-10 cycles)
+# but short enough for fast iteration during development
 SIM_DURATION         = 3600    # 1 hour of simulation (seconds)
+
+# WHY 8 AM MONDAY? — Maximum demand asymmetry (NS >> EW due to commute patterns)
+# This is where fixed timing fails most and Webster's formula helps most
 SCENARIO_HOUR        = 8       # 8 AM Monday — peak asymmetric demand
-SCENARIO_DOW         = 0
+SCENARIO_DOW         = 0       # 0 = Monday (weekday commute pattern)
+
+# WHY 60s UPDATE INTERVAL? — Balances responsiveness vs. stability
+#   - Too fast (<30s): timing oscillates before queues clear; confuses drivers
+#   - Too slow (>120s): can't respond to rapid demand changes or incidents
+#   - 60s ≈ 1 signal cycle: allows full queue clearance before re-evaluation
 TIMING_UPDATE_EVERY  = 60      # re-optimise timings every 60 s
+
+# WHY 30 DAYS? — Provides ~700 samples per intersection×direction×hour combination
+# Enough for tree models to learn hour×direction interactions without overfitting
 TRAINING_DAYS        = 30
 
 
@@ -1331,7 +1406,7 @@ def main() -> None:
     # without needing a separate manual step.
     banner("Generating Architecture & MAE Diagrams")
     try:
-        from generate_diagrams import architecture_diagram, mae_explanation_diagram
+        from scripts.generate_diagrams import architecture_diagram, mae_explanation_diagram
         architecture_diagram()
         mae_explanation_diagram()
         print(f"  Saved: {FIGURES_DIR}/fig_architecture.png")

@@ -785,7 +785,7 @@ def gini_coefficient_regression(
     cum_frac    = np.arange(1, n + 1) / n
 
     # Lorenz area (trapezoidal rule) — area under the concentration curve
-    lorenz_area = np.trapz(cum_actual, cum_frac)
+    lorenz_area = np.trapezoid(cum_actual, cum_frac)
     gini        = 2 * lorenz_area - 1   # ∈ [0,1] for a useful model
 
     if verbose:
@@ -884,7 +884,7 @@ def auc_analysis(
     sorted_y    = y_te[sort_idx]
     cum_actual  = np.cumsum(sorted_y) / sorted_y.sum()
     cum_frac    = np.arange(1, len(sorted_y) + 1) / len(sorted_y)
-    gini        = 2 * np.trapz(cum_actual, cum_frac) - 1
+    gini        = 2 * np.trapezoid(cum_actual, cum_frac) - 1
     ranking_auc = (gini + 1) / 2.0
 
     # ── (2) Binary ROC-AUC: "high demand" = top quintile of actual rates ─
