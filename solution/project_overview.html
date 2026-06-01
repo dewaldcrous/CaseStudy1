@@ -725,13 +725,49 @@ Y = y_ns + y_ew          <span style="color:#64748b;"># combined load</span></pr
     <div class="feature-item low"><span class="name">peak × direction</span><span class="imp">Low</span></div>
   </div>
 
-  <h3>Feature Reduction Techniques</h3>
-  <ul style="margin: 12px 0 0 20px;">
-    <li><strong>Circular encoding:</strong> hour → (sin, cos) to capture 23:00→00:00 continuity</li>
-    <li><strong>Binary flags:</strong> is_peak_am, is_peak_pm instead of 24 one-hot hour columns</li>
-    <li><strong>Correlation analysis:</strong> Removed redundant features (r > 0.9)</li>
-    <li><strong>SHAP analysis:</strong> Validated top features match domain intuition</li>
-  </ul>
+  <h3>Feature Reduction Techniques Tested</h3>
+  <table class="data-table" style="margin: 16px 0;">
+    <thead>
+      <tr>
+        <th>Technique</th>
+        <th>Result</th>
+        <th>Decision</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>One-hot hour (24 columns)</strong></td>
+        <td>Overfitting, high variance between folds</td>
+        <td style="color: #dc2626;">Rejected</td>
+      </tr>
+      <tr>
+        <td><strong>Cyclic encoding (sin/cos)</strong></td>
+        <td>2 columns, preserves 23:00→00:00 continuity</td>
+        <td style="color: #16a34a;"><strong>Selected</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Peak flags (AM/PM)</strong></td>
+        <td>2 binary columns, captures rush hours simply</td>
+        <td style="color: #16a34a;"><strong>Selected</strong></td>
+      </tr>
+      <tr>
+        <td><strong>PCA dimensionality reduction</strong></td>
+        <td>Lost interpretability, no accuracy improvement</td>
+        <td style="color: #dc2626;">Rejected</td>
+      </tr>
+      <tr>
+        <td><strong>RFE (Recursive Feature Elimination)</strong></td>
+        <td>Top features matched SHAP analysis</td>
+        <td style="color: #2563eb;">Validated</td>
+      </tr>
+      <tr>
+        <td><strong>Correlation filtering (r > 0.9)</strong></td>
+        <td>Identified redundancies, kept both sin/cos for completeness</td>
+        <td style="color: #2563eb;">Applied</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.9em; color: #64748b;"><strong>Final model:</strong> 12 features balancing interpretability with predictive power — temporal (hour_sin, hour_cos, is_peak_am, is_peak_pm, is_weekend, day_of_week), spatial (intersection_id, direction_id, ns_direction), and 3 interaction terms.</p>
 </section>
 
 <!-- SHAP ANALYSIS -->
@@ -1116,6 +1152,40 @@ Base value (avg demand):  <span class="number">0.085</span> veh/s
       <li><strong>Webster + ML</strong> predicts demand before queues build, then fine-tunes with 30% queue feedback for unexpected events</li>
     </ul>
   </div>
+
+  <h3>Approaches Considered But Not Implemented</h3>
+  <table class="data-table" style="margin: 16px 0; font-size: 0.9em;">
+    <thead>
+      <tr>
+        <th>Approach</th>
+        <th>Why Considered</th>
+        <th>Why Not Used</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>SCOOT / SCATS</strong></td>
+        <td>Industry standard adaptive systems</td>
+        <td>Require real sensor infrastructure; proprietary algorithms</td>
+      </tr>
+      <tr>
+        <td><strong>Green Wave Coordination</strong></td>
+        <td>Could optimize arterial flow between intersections</td>
+        <td>Requires solving NP-hard coordination problem; documented as future work</td>
+      </tr>
+      <tr>
+        <td><strong>Deep Reinforcement Learning</strong></td>
+        <td>Could learn optimal policies end-to-end</td>
+        <td>Needs massive training data; hard to interpret; constraint satisfaction difficult</td>
+      </tr>
+      <tr>
+        <td><strong>Multi-Agent RL</strong></td>
+        <td>Could coordinate adjacent intersections</td>
+        <td>Complex reward shaping; unstable training; scope limitation</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.85em; color: #64748b;"><strong>Decision rationale:</strong> Webster's formula provides mathematically proven optimality for isolated intersections with low computational cost. For a 4-intersection demo, simplicity and interpretability were prioritized over complex coordination that would require significantly more development effort with uncertain benefits.</p>
 
   <h3>Why 70% ML + 30% Queue?</h3>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 12px;">
