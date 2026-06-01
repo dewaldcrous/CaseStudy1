@@ -1,180 +1,140 @@
-# Smart Traffic Light Optimisation — Senior Quant Case Study (Problem 1)
+# Smart Traffic Light Optimisation — Senior Quant Case Study
 
-A machine-learning–driven adaptive traffic signal controller that reduces average
-vehicle wait time by **40.1%** at peak hour versus a fixed-timing baseline,
-exceeding the required ≥20% target in **all 6 tested scenarios**.
+A machine-learning–driven adaptive traffic signal controller for a **connected 2×2 intersection network** that reduces average vehicle wait time by **~28%** (up to **57% during PM Rush**) and achieves **+17% throughput** during rush hours.
 
 ---
 
-## TL;DR — Results
+## Quick Start — Key Documents
+
+| Document | Purpose |
+|----------|---------|
+| **[`demo.html`](demo.html)** | Interactive visualization — run in browser, see vehicles routing through network |
+| **[`project_overview.html`](project_overview.html)** | Comprehensive technical documentation with all figures and explanations |
+| **[`presenter_guide.html`](presenter_guide.html)** | Presentation talking points, anticipated questions, and demo walkthrough |
+
+**Open `demo.html` in any browser** to see the connected network simulation in action.
+
+---
+
+## Results Summary
 
 | Metric | Value |
-|---|---|
-| Peak-hour wait reduction (Mon 8am) | **40.1%** |
-| Best scenario (Mon 5pm PM rush) | **+73.8%** |
-| Worst scenario (Mon 8am AM rush) | **+38.9%** |
-| Scenarios meeting ≥20% target | **6 / 6** |
-| Best model | **LightGBM** (Test MAE 0.00545 veh/s, R² 0.9852) |
-| CV Val R² (5-fold) | 0.9866 ± 0.0031 |
+|--------|-------|
+| Avg wait reduction (all scenarios) | **~28%** |
+| Best scenario (PM Rush) | **+57%** |
+| AM Rush throughput improvement | **+17%** |
+| Best ML model | **LightGBM** (R² = 0.985, Gini = 0.94) |
+| Network topology | **4 connected intersections** (2×2 grid) |
 
-**The full business case with all charts is in [`report.html`](report.html)** — open it in any browser.
+### Connected Network Model
+
+Vehicles enter the 2×2 grid at edge approaches, route through adjacent intersections, and exit at the opposite edge:
+
+```
+        North Edge (spawn/exit)
+              ↓   ↓
+      +-----[Int 0]---[Int 1]-----+
+      |        |         |        |
+West  →        ↓         ↓        ← East
+Edge  →        |         |        ← Edge
+      |        |         |        |
+      +-----[Int 2]---[Int 3]-----+
+              ↑   ↑
+        South Edge (spawn/exit)
+```
+
+**Vehicle colors by origin:** Purple (Int 0), White (Int 1), Black (Int 2), Orange (Int 3)
 
 ---
 
-## How to run
+## How to Run
 
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Run the full pipeline — ML training + validation + simulation + 15 PNGs
+# 2. Open the interactive demo (recommended)
+#    Just open demo.html in any browser - no server needed
+
+# 3. Run the full ML pipeline + benchmarks
 python main.py
 
-# 3. Run the live animated demos (opens a real-time window)
-python main.py demo_am_rush    # Monday 8am — NS/EW asymmetry live
-python main.py demo_full_day   # Full 24-hour cycle — adaptation across regimes
-python main.py demo_incident   # Accident at t=150s + recovery at t=240s
-python main.py demo_all        # All three in sequence
+# 4. Run live animated demos (Python visualization)
+python main.py demo_am_rush    # Monday 8am — NS dominant
+python main.py demo_full_day   # Full 24-hour cycle
+python main.py demo_incident   # Accident + recovery
 
-# 4. Save all three demos as GIFs (no display needed — embed in slides)
-python save_demos.py
-
-# 5. Scenario benchmark only (no window)
-python main.py benchmark
-
-# 5b. Run the interactive Streamlit dashboard (recommended for presentation)
-#     Opens http://localhost:8501 in your browser
-#     Controls: Start/Pause, speed slider, live charts, incident trigger button
+# 5. Run Streamlit dashboard
 streamlit run dashboard.py
-
-# 6. Open the static business-case report (all charts embedded)
-#    report.html — open in any browser
-
-# 7. Load saved model without retraining
-python -c "
-import joblib
-from src.ml_model import predict_rates
-model  = joblib.load('models/best_model.pkl')
-scaler = joblib.load('models/best_scaler.pkl')
-rates  = predict_rates(model, scaler, hour=8, day_of_week=0)
-print('NS at Mon 8am:', rates[0]['north'], 'veh/s')
-"
 ```
 
-Requires Python 3.10+. H2O AutoML is optional (needs Java 11+); the pipeline
-skips it gracefully if unavailable.
+Requires Python 3.10+.
 
 ---
 
-## What the pipeline does (10 sections)
-
-| # | Section | What it produces |
-|---|---|---|
-| 1 | Synthetic data generation | 11,520 rows from 6 documented rules (A–F) |
-| 2 | Feature engineering | 12 features incl. circular time encoding |
-| 2b | **Correlation analysis** | Feature→target Pearson r + cross-correlation heatmap |
-| 3 | ML model comparison | Ridge · RF · GBM · LightGBM · XGBoost ranked by MAE |
-| 3b | H2O AutoML | (optional) AutoML leaderboard |
-| 3c | Model enhancement | FE / sampling / hyperparameter-tuning experiments |
-| 3d | **Model validation** | SHAP · Gini · AUC/ROC · residuals · learning curves · 5-fold CV |
-| 4 | Baseline analysis | Why fixed 30/30 timing is suboptimal (with math) |
-| 5 | Optimizer walkthrough | Webster's formula, step by step |
-| 6 | Simulation & comparison | Baseline vs Webster × each ML model |
-| 7 | Scenario benchmark | When is the 20% target met? (6 scenarios) |
-
----
-
-## Project structure
+## Project Structure
 
 ```
-ADHOC/solution/
-├── main.py                  # Orchestrator — runs all 10 sections, generates all 15 PNGs
-├── generate_diagrams.py     # Architecture + MAE diagrams (also called by main.py)
-├── report.html              # ← Business-case report (open this in a browser)
-├── README.md                # This file
-├── requirements.txt         # numpy · pandas · scikit-learn · lightgbm · xgboost · shap
+solution/
+├── demo.html              # ← Interactive browser visualization (START HERE)
+├── project_overview.html  # ← Full technical documentation
+├── presenter_guide.html   # ← Presentation guide with talking points
+├── main.py                # ML pipeline orchestrator
+├── dashboard.py           # Streamlit dashboard
 ├── src/
-│   ├── simulator.py         # Queue-based physics engine (Poisson arrivals, saturation discharge)
-│   ├── ml_model.py          # Rules A–F, feature engineering, 5-model training
-│   ├── optimizer.py         # FixedTimingController + WebsterOptimizer (7-step formula)
-│   ├── model_enhancement.py # FE / sampling / tuning / feature-reduction experiments
-│   ├── model_validation.py  # SHAP, Gini, AUC, residuals, learning curves, cross-validation
-│   └── visualization.py     # SUPERSEDED — kept for reference, not called by main.py
-├── models/                  # Created on first run
-│   ├── best_model.pkl       # Saved LightGBM (joblib) — load without retraining
-│   ├── best_scaler.pkl      # StandardScaler or None
-│   └── model_info.txt       # Model name, date, feature column order
-└── *.png                    # 15 generated figures
+│   ├── simulator.py       # Connected network simulation engine
+│   ├── ml_model.py        # LightGBM traffic prediction
+│   ├── optimizer.py       # Webster's formula + 6 controller variants
+│   ├── live_viz.py        # Matplotlib animation
+│   └── model_validation.py
+├── models/
+│   ├── best_model.pkl     # Saved LightGBM model
+│   └── best_scaler.pkl    # Feature scaler
+└── figures/               # Generated analysis figures
 ```
 
 ---
 
-## Key design decisions
+## Key Architecture
 
-### Fair A/B comparison (`demand_model` vs `control_model`)
-Every simulation uses the **same best model as the demand source** (what traffic
-actually arrives), so all controllers see identical traffic volumes. Only the
-**timing strategy** varies. Without this separation, using a weaker model as the
-demand source would artificially distort queue lengths and invalidate the comparison.
+### ML → Optimizer Pipeline
 
-### Webster's (1958) optimal cycle formula
 ```
-C* = (1.5·L + 5) / (1 − Y)
-```
-- `L` = total lost time per cycle (4s)
-- `Y` = Σ flow ratios = Σ (demand / saturation flow)
-- Green split allocated proportionally to flow ratios
-- ML prediction blended with live queue feedback (α = 0.7)
+ML predicts 4 rates per intersection:
+  north: 0.14, south: 0.12, east: 0.05, west: 0.04
 
-### Rush-hour MAE as the enhancement metric
-Model enhancements are judged on **rush-hour MAE**, not overall MAE — prediction
-errors during peaks cost far more in driver wait time than errors at 3am.
+Aggregate by axis (max):
+  ns_pred = max(0.14, 0.12) = 0.14
+  ew_pred = max(0.05, 0.04) = 0.05
+
+Blend with queue feedback (70/30):
+  ns_demand = 0.7 × ns_pred + 0.3 × queue_ns
+
+Flow ratios for Webster:
+  y_ns = ns_demand / 0.5  (saturation = 0.5 veh/s)
+```
+
+### Independent Intersection Optimization
+
+Each intersection runs its own Webster optimizer independently — no green wave coordination. This is a documented limitation with potential for future improvement.
 
 ---
 
-## Honest findings (negative results included)
+## Scenario Benchmarks
 
-1. **Model enhancement gave only +0.6% rush-hour MAE** — below the 5% deployment
-   threshold. The base LightGBM model is already near the irreducible error floor
-   set by Rule F's log-normal noise. *Recommendation: keep the simpler base model.*
+| Scenario | Wait Δ | Throughput Δ | Notes |
+|----------|--------|--------------|-------|
+| PM Rush | **+57%** | +12% | Under capacity — both metrics improve |
+| Midday | +36% | +5% | Balanced demand |
+| Weekend | +29% | +3% | Lower volume |
+| AM Rush | -8% | **+17%** | Over-capacity — tradeoff explained below |
 
-2. **Gini MDI is biased.** It ranked `intersection_id` as the #1 feature; both
-   Permutation importance and SHAP rank it #7. SHAP correctly identifies
-   `is_morning_rush` as the true #1 driver — validating the data-generating rules.
+### AM Rush Tradeoff
 
-3. **Gini = 0.506 (moderate) despite R² = 0.9866 — resolved by the two AUCs.**
-   The *ranking AUC* = (Gini+1)/2 = **0.753** carries the same limitation: it is
-   dragged down by the near-impossible task of finely ordering thousands of
-   near-identical off-peak rows. But the *binary ROC-AUC* for discriminating
-   high-demand approaches (top 19%) is **0.9946** — near perfect. The optimizer
-   only needs the coarse "busy vs quiet" distinction, which the model nails
-   (confirmed by the 40.1% simulation gain).
-
----
-
-## Generated figures
-
-| File | Content |
-|---|---|
-| `fig1_time_series.png` | Wait / queue / throughput over 60-min rush hour |
-| `fig2_model_comparison.png` | MAE, R², and optimizer gain per model |
-| `fig3_scenario_benchmark.png` | Improvement % across 6 scenarios |
-| `fig4_feature_importance.png` | Gini MDI feature importances |
-| `fig_correlation_analysis.png` | Feature→target r + cross-correlation matrix |
-| `fig_shap_summary.png` | SHAP beeswarm |
-| `fig_shap_bar.png` | SHAP mean \|φ\| ranking |
-| `fig_shap_by_hour.png` | Top features' SHAP by hour |
-| `fig_shap_waterfall.png` | Single-prediction explanation |
-| `fig_residual_analysis.png` | 5-panel residual diagnostic |
-| `fig_learning_curves.png` | Train vs val MAE by dataset size |
-| `fig_gini_lorenz.png` | Lorenz curve + Gini coefficient |
-| `fig_roc_auc.png` | ROC curve — high-demand discrimination (ROC-AUC = 0.9946) |
+AM Rush arrival rates (0.56 veh/s) exceed saturation capacity (0.5 veh/s). The optimizer aggressively pushes NS vehicles downstream, causing cascading congestion (Int 0 → Int 2). Result: +17% throughput but higher wait times. The baseline's 50/50 split throttles flow, keeping wait times lower but processing fewer vehicles.
 
 ---
 
 ## References
 
-Webster (1958) · HCM 6th Ed. (TRB, 2016) · Ke et al. LightGBM (2017) ·
-Chen & Guestrin XGBoost (2016) · Lundberg & Lee SHAP (2017) · Shapley (1953) ·
-Maze et al. weather (2006) · Breiman Random Forests (2001).
-Full citations in `report.html` § References.
+See `project_overview.html` for full citations including Webster (1958), LightGBM (Ke et al., 2017), SHAP (Lundberg & Lee, 2017).
