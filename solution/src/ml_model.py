@@ -36,18 +36,10 @@ try:
 except ImportError:
     LGBM_AVAILABLE = False
 
-try:
-    import xgboost as xgb
-    XGB_AVAILABLE = True
-except ImportError:
-    XGB_AVAILABLE = False
-
-try:
-    import h2o
-    from h2o.automl import H2OAutoML
-    H2O_AVAILABLE = True
-except ImportError:
-    H2O_AVAILABLE = False
+# XGBoost and H2O disabled for executable compatibility
+# (LightGBM is the best model and is always used)
+XGB_AVAILABLE = False
+H2O_AVAILABLE = False
 
 
 # ================================================================== #

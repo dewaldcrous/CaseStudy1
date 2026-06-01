@@ -39,6 +39,14 @@ COL_TEXT   = "#ecf0f1"
 COL_BASELINE = "#e74c3c"
 COL_OPT      = "#2ecc71"
 
+# Color by origin intersection - makes network flow visible
+ORIGIN_COLORS = {
+    0: "#9b59b6",  # Purple - vehicles from Int 0 (top-left)
+    1: "#ffffff",  # White - vehicles from Int 1 (top-right)
+    2: "#2c3e50",  # Black/Dark Slate - vehicles from Int 2 (bottom-left)
+    3: "#f39c12",  # Orange - vehicles from Int 3 (bottom-right)
+}
+
 
 def run_live_demo(
     scenario: str = "am_rush",
@@ -216,13 +224,108 @@ def run_live_demo(
                         color=COL_YELLOW, fontsize=7, fontweight="bold",
                         zorder=7)
 
+        # Draw traveling vehicles as colored dots on roads between intersections
+        for v in getattr(sim, 'traveling_vehicles', []):
+            route = getattr(v, 'route', None)
+            current_route_idx = getattr(v, 'current_route_idx', 0)
+            if route is None or current_route_idx < 1:
+                continue
+            # Calculate progress along the road
+            travel_time = getattr(sim, 'travel_time', 2.0)
+            travel_start_time = getattr(v, 'travel_start_time', 0.0)
+            progress = (sim.time - travel_start_time) / travel_time
+            progress = min(max(progress, 0.0), 1.0)
+
+            # Get start and end intersection positions
+            prev_int = sim.intersections[route[current_route_idx - 1]]
+            curr_int = sim.intersections[route[current_route_idx]]
+            start_pos = prev_int.position
+            end_pos = curr_int.position
+
+            # Interpolate position
+            vx = start_pos[0] + (end_pos[0] - start_pos[0]) * progress
+            vy = start_pos[1] + (end_pos[1] - start_pos[1]) * progress
+
+            # Color by origin intersection
+            origin_int = getattr(v, 'origin_intersection', -1)
+            origin_int = origin_int if origin_int >= 0 else 0
+            color = ORIGIN_COLORS.get(origin_int, "#888888")
+
+            dot = plt.Circle((vx, vy), 0.04, color=color, zorder=8, alpha=0.9,
+                             edgecolor='white', linewidth=1.5)
+            ax.add_patch(dot)
+
+        # Draw queued vehicles with origin colors (show a few dots per queue)
+        for inter in sim.intersections:
+            cx, cy = inter.position
+            queue_dot_offsets = {
+                "north": [(cx + 0.08, cy - 0.35 - i * 0.06) for i in range(5)],
+                "south": [(cx + 0.08, cy + 0.35 + i * 0.06) for i in range(5)],
+                "east":  [(cx + 0.35 + i * 0.06, cy + 0.08) for i in range(5)],
+                "west":  [(cx - 0.35 - i * 0.06, cy + 0.08) for i in range(5)],
+            }
+            for direction, queue in inter.queues.items():
+                offsets = queue_dot_offsets[direction]
+                for i, v in enumerate(queue[:5]):  # Show up to 5 vehicles per queue
+                    if i >= len(offsets):
+                        break
+                    origin_int = getattr(v, 'origin_intersection', -1)
+                    origin_int = origin_int if origin_int >= 0 else inter.id
+                    color = ORIGIN_COLORS.get(origin_int, "#888888")
+                    dx, dy = offsets[i]
+                    dot = plt.Circle((dx, dy), 0.025, color=color, zorder=8, alpha=0.85)
+                    ax.add_patch(dot)
+
         # Stats box
         m = sim.get_metrics()
+        in_transit = len(getattr(sim, 'traveling_vehicles', []))
         ax.text(0.02, 0.02,
                 f"t={elapsed:.0f}s  wait={m['avg_wait_time']:.1f}s  "
-                f"depart={m['total_departed']}",
+                f"depart={m['total_departed']}  in-transit={in_transit}",
                 transform=ax.transAxes, fontsize=7.5,
                 color=COL_TEXT, va="bottom")
+
+        # Per-intersection origin breakdown (shows vehicles from other intersections)
+        for inter in sim.intersections:
+            cx, cy = inter.position
+            # Count vehicles at this intersection by origin
+            origin_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+            for queue in inter.queues.values():
+                for v in queue:
+                    origin = getattr(v, 'origin_intersection', -1)
+                    origin = origin if origin >= 0 else inter.id
+                    if origin in origin_counts:
+                        origin_counts[origin] += 1
+
+            # Display counts as colored numbers below intersection
+            count_str_parts = []
+            for orig_id, count in origin_counts.items():
+                if count > 0:
+                    count_str_parts.append(f"{count}")
+                else:
+                    count_str_parts.append("-")
+
+            # Show as a small table below the intersection
+            y_offset = -0.55
+            ax.text(cx, cy + y_offset, "From:", ha="center", fontsize=5,
+                    color=COL_TEXT, zorder=10)
+            for i, (orig_id, count) in enumerate(origin_counts.items()):
+                dot_x = cx - 0.15 + i * 0.10
+                dot = plt.Circle((dot_x, cy + y_offset - 0.08), 0.025,
+                                 color=ORIGIN_COLORS[orig_id], zorder=10)
+                ax.add_patch(dot)
+                ax.text(dot_x, cy + y_offset - 0.16, str(count), ha="center",
+                        fontsize=5, color=COL_TEXT, zorder=10)
+
+        # Origin color legend
+        legend_y = 0.95
+        ax.text(0.98, legend_y, "Origin:", transform=ax.transAxes, fontsize=7,
+                color=COL_TEXT, ha="right", va="top")
+        for i, (int_id, color) in enumerate(ORIGIN_COLORS.items()):
+            dot = plt.Circle((2.55, 1.6 - i * 0.18), 0.05, color=color, zorder=10)
+            ax.add_patch(dot)
+            ax.text(2.65, 1.6 - i * 0.18, f"Int {int_id}", fontsize=6,
+                    color=COL_TEXT, va="center")
 
     # ── helper: update metric charts ─────────────────────────────────
     def update_charts() -> None:

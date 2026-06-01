@@ -56,6 +56,14 @@ C_OPT      = "#2ecc71"
 C_BG       = "#0e1117"
 C_PANEL    = "#1a1f2e"
 
+# Color by origin intersection - makes network flow visible
+ORIGIN_COLORS = {
+    0: "#9b59b6",  # Purple - vehicles from Int 0 (top-left)
+    1: "#ffffff",  # White - vehicles from Int 1 (top-right)
+    2: "#2c3e50",  # Black/Dark Slate - vehicles from Int 2 (bottom-left)
+    3: "#f39c12",  # Orange - vehicles from Int 3 (bottom-right)
+}
+
 
 # ── Build Plotly intersection grid ────────────────────────────────
 def build_grid_figure(sim, title: str) -> go.Figure:
@@ -160,6 +168,113 @@ def build_grid_figure(sim, title: str) -> go.Figure:
                 text="⚠ INCIDENT", showarrow=False,
                 font=dict(color=C_YELLOW, size=11, family="Arial Bold"),
             )
+
+    # Draw traveling vehicles as colored dots on roads between intersections
+    travel_x, travel_y, travel_colors = [], [], []
+    for v in getattr(sim, 'traveling_vehicles', []):
+        route = getattr(v, 'route', None)
+        current_route_idx = getattr(v, 'current_route_idx', 0)
+        if route is None or current_route_idx < 1:
+            continue
+        # Calculate progress along the road
+        travel_time = getattr(sim, 'travel_time', 2.0)
+        travel_start_time = getattr(v, 'travel_start_time', 0.0)
+        progress = (sim.time - travel_start_time) / travel_time
+        progress = min(max(progress, 0.0), 1.0)
+
+        # Get start and end intersection positions
+        prev_int = sim.intersections[route[current_route_idx - 1]]
+        curr_int = sim.intersections[route[current_route_idx]]
+        start_pos = prev_int.position
+        end_pos = curr_int.position
+
+        # Interpolate position
+        vx = start_pos[0] + (end_pos[0] - start_pos[0]) * progress
+        vy = start_pos[1] + (end_pos[1] - start_pos[1]) * progress
+
+        # Color by origin intersection
+        origin_int = getattr(v, 'origin_intersection', -1)
+        origin_int = origin_int if origin_int >= 0 else 0
+        color = ORIGIN_COLORS.get(origin_int, "#888888")
+
+        travel_x.append(vx)
+        travel_y.append(vy)
+        travel_colors.append(color)
+
+    if travel_x:
+        fig.add_trace(go.Scatter(
+            x=travel_x, y=travel_y, mode="markers",
+            marker=dict(size=10, color=travel_colors, opacity=0.9,
+                        line=dict(width=1, color="white")),
+            showlegend=False, hoverinfo="skip",
+        ))
+
+    # Draw queued vehicles with origin colors
+    queue_x, queue_y, queue_colors = [], [], []
+    for inter in sim.intersections:
+        cx, cy = inter.position
+        queue_dot_offsets = {
+            "north": [(cx + 0.08, cy - 0.35 - i * 0.05) for i in range(5)],
+            "south": [(cx + 0.08, cy + 0.35 + i * 0.05) for i in range(5)],
+            "east":  [(cx + 0.35 + i * 0.05, cy + 0.08) for i in range(5)],
+            "west":  [(cx - 0.35 - i * 0.05, cy + 0.08) for i in range(5)],
+        }
+        for direction, queue in inter.queues.items():
+            offsets = queue_dot_offsets[direction]
+            for i, v in enumerate(queue[:5]):  # Show up to 5 vehicles per queue
+                if i >= len(offsets):
+                    break
+                origin_int = getattr(v, 'origin_intersection', -1)
+                origin_int = origin_int if origin_int >= 0 else inter.id
+                color = ORIGIN_COLORS.get(origin_int, "#888888")
+                dx, dy = offsets[i]
+                queue_x.append(dx)
+                queue_y.append(dy)
+                queue_colors.append(color)
+
+    if queue_x:
+        fig.add_trace(go.Scatter(
+            x=queue_x, y=queue_y, mode="markers",
+            marker=dict(size=6, color=queue_colors, opacity=0.85),
+            showlegend=False, hoverinfo="skip",
+        ))
+
+    # Per-intersection origin breakdown (shows vehicles from other intersections)
+    for inter in sim.intersections:
+        cx, cy = inter.position
+        # Count vehicles at this intersection by origin
+        origin_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+        for queue in inter.queues.values():
+            for v in queue:
+                origin = getattr(v, 'origin_intersection', -1)
+                origin = origin if origin >= 0 else inter.id
+                if origin in origin_counts:
+                    origin_counts[origin] += 1
+
+        # Display counts below intersection
+        y_offset = -0.45
+        fig.add_annotation(x=cx, y=cy + y_offset, text="From:", showarrow=False,
+                          font=dict(color="white", size=7))
+        for i, (orig_id, count) in enumerate(origin_counts.items()):
+            dot_x = cx - 0.12 + i * 0.08
+            fig.add_shape(type="circle",
+                          x0=dot_x - 0.02, y0=cy + y_offset - 0.1,
+                          x1=dot_x + 0.02, y1=cy + y_offset - 0.06,
+                          fillcolor=ORIGIN_COLORS[orig_id], line_width=0)
+            fig.add_annotation(x=dot_x, y=cy + y_offset - 0.16, text=str(count),
+                              showarrow=False, font=dict(color="white", size=7))
+
+    # Add origin color legend
+    fig.add_annotation(x=1.55, y=1.5, text="Origin:", showarrow=False,
+                       font=dict(color="white", size=9), xanchor="left")
+    for i, (int_id, color) in enumerate(ORIGIN_COLORS.items()):
+        fig.add_shape(type="circle",
+                      x0=1.55, y0=1.35 - i * 0.18,
+                      x1=1.62, y1=1.42 - i * 0.18,
+                      fillcolor=color, line_width=0)
+        fig.add_annotation(x=1.65, y=1.385 - i * 0.18,
+                          text=f"Int {int_id}", showarrow=False,
+                          font=dict(color="white", size=8), xanchor="left")
 
     return fig
 

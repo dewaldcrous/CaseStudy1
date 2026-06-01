@@ -16,6 +16,22 @@ A machine-learning–driven adaptive traffic signal controller for a **connected
 
 ---
 
+## Demo Options Comparison
+
+| | **demo.html** | **TrafficDemo.exe** |
+|---|---|---|
+| **Pros** | Zero install, runs in any browser | Uses actual Python ML models |
+| | Full UI controls (buttons, sliders) | No Python/dependencies required |
+| | Smaller file size (~50KB) | Identical algorithms to main.py |
+| | Easy to share/embed | Smooth matplotlib animation |
+| **Cons** | JS port of algorithms (not Python models) | Larger file (~150MB) |
+| | Requires modern browser | Keyboard-only controls |
+| | No direct model file access | Windows-only |
+
+**Both produce equivalent results** — same Webster formula, same 70/30 ML-queue blend, same ~28% improvement. The HTML version ports the trained model coefficients to JavaScript; the executable runs the actual LightGBM model.
+
+---
+
 ## Results Summary
 
 | Metric | Value |

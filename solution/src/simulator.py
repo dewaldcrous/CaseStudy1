@@ -35,14 +35,22 @@ class LightState(Enum):
 @dataclass
 class Vehicle:
     """
-    Represents a vehicle queued at an intersection approach.
-    From starter code — extended with arrived_at for wait-time tracking.
+    Represents a vehicle traveling through the intersection network.
+    From starter code — extended with routing fields for network traversal.
 
     position   : (x, y) coordinate of the approach lane this vehicle is in
     destination: (x, y) of the next intersection this vehicle is heading to
     speed      : discharge speed when light is green (vehicles/second)
     wait_time  : cumulative seconds spent waiting at a RED light
     arrived_at : simulation time (s) when the vehicle joined the queue
+
+    Network routing fields:
+    state              : "queued" (waiting at intersection) or "traveling" (between intersections)
+    route              : list of intersection IDs from entry to exit [entry_int, ..., exit_int]
+    origin_intersection: which intersection this vehicle first entered (for color coding)
+    current_route_idx  : index into route list (which intersection we're at/heading to)
+    travel_start_time  : when vehicle started traveling between intersections
+    arrival_direction  : which approach to join at the next intersection
     """
     id: int
     position: Tuple[float, float]
@@ -50,6 +58,13 @@ class Vehicle:
     speed: float
     wait_time: float = 0.0
     arrived_at: float = 0.0
+    # Network routing fields
+    state: str = "queued"
+    route: Optional[List[int]] = None
+    origin_intersection: int = -1
+    current_route_idx: int = 0
+    travel_start_time: float = 0.0
+    arrival_direction: Optional[str] = None
 
 
 @dataclass
@@ -146,6 +161,12 @@ class TrafficSimulator:
         # e.g. {0: {'north': 0.2}} means north approach at int 0 is 80% blocked
         self._incidents: Dict[int, Dict[str, float]] = {}
 
+        # Network routing — vehicles flow between intersections
+        self.network_graph = self._build_network_graph()
+        self.edge_approaches = self._identify_edge_approaches()
+        self.traveling_vehicles: List[Vehicle] = []
+        self.travel_time = 2.0  # seconds to travel between adjacent intersections (reduced for better flow)
+
     # ---------------------------------------------------------------- #
     #  Starter code method: _create_intersection_grid                   #
     # ---------------------------------------------------------------- #
@@ -172,23 +193,154 @@ class TrafficSimulator:
         return intersections
 
     # ---------------------------------------------------------------- #
+    #  Network topology methods                                          #
+    # ---------------------------------------------------------------- #
+
+    def _build_network_graph(self) -> Dict[Tuple[int, str], Optional[int]]:
+        """
+        Build adjacency mapping: (intersection_id, direction) → next_intersection_id.
+
+        For a 2×2 grid:
+          - Int 0 at (0,0): east→Int1, south→Int2, north→None (edge), west→None (edge)
+          - Int 1 at (1,0): west→Int0, south→Int3, north→None (edge), east→None (edge)
+          - Int 2 at (0,1): east→Int3, north→Int0, south→None (edge), west→None (edge)
+          - Int 3 at (1,1): west→Int2, north→Int1, south→None (edge), east→None (edge)
+
+        None means the vehicle exits the network (edge of grid).
+        """
+        graph: Dict[Tuple[int, str], Optional[int]] = {}
+        side = self.grid_size
+
+        for inter in self.intersections:
+            col, row = int(inter.position[0]), int(inter.position[1])
+            iid = inter.id
+
+            # Direction offsets: direction → (delta_col, delta_row)
+            # Note: 'north' means vehicle is traveling northward (row decreases)
+            #       'south' means vehicle is traveling southward (row increases)
+            direction_deltas = {
+                'north': (0, -1),   # traveling north → row decreases
+                'south': (0, +1),   # traveling south → row increases
+                'east':  (+1, 0),   # traveling east → col increases
+                'west':  (-1, 0),   # traveling west → col decreases
+            }
+
+            for direction, (dc, dr) in direction_deltas.items():
+                nc, nr = col + dc, row + dr
+                if 0 <= nc < side and 0 <= nr < side:
+                    # Valid neighbor intersection
+                    next_id = int(nr * side + nc)
+                    graph[(iid, direction)] = next_id
+                else:
+                    # Edge of network — vehicle exits
+                    graph[(iid, direction)] = None
+
+        return graph
+
+    def _identify_edge_approaches(self) -> Dict[int, List[str]]:
+        """
+        Identify which approaches at each intersection are network edges.
+
+        Edge approaches are where vehicles can enter/exit the network.
+        For a 2×2 grid:
+          - Int 0: north, west are edges
+          - Int 1: north, east are edges
+          - Int 2: south, west are edges
+          - Int 3: south, east are edges
+        """
+        edges: Dict[int, List[str]] = {}
+        for inter in self.intersections:
+            iid = inter.id
+            edges[iid] = []
+            for direction in ['north', 'south', 'east', 'west']:
+                if self.network_graph.get((iid, direction)) is None:
+                    edges[iid].append(direction)
+        return edges
+
+    def _get_arrival_direction(self, from_int: int, to_int: int) -> str:
+        """
+        Determine which approach a vehicle arrives at when traveling from one intersection to another.
+
+        If vehicle leaves Int 0 going east to Int 1, it arrives at Int 1's west approach.
+        """
+        opposite = {'north': 'south', 'south': 'north', 'east': 'west', 'west': 'east'}
+        for (iid, direction), next_id in self.network_graph.items():
+            if iid == from_int and next_id == to_int:
+                return opposite[direction]
+        return 'north'  # fallback
+
+    def _generate_random_route(self, entry_int: int, entry_dir: str) -> List[int]:
+        """
+        Generate a random route through the network from entry point to a random exit.
+
+        Uses BFS-like exploration to find a path to any edge exit point.
+        """
+        # Determine which direction the vehicle is initially traveling
+        # If entering from 'north' approach, vehicle is heading south
+        travel_dir = {'north': 'south', 'south': 'north', 'east': 'west', 'west': 'east'}[entry_dir]
+
+        route = [entry_int]
+        current_int = entry_int
+        visited = {entry_int}
+        max_hops = 10  # prevent infinite loops
+
+        for _ in range(max_hops):
+            # Get possible next intersections (excluding where we came from)
+            possible_moves = []
+            for direction in ['north', 'south', 'east', 'west']:
+                next_int = self.network_graph.get((current_int, direction))
+                if next_int is not None and next_int not in visited:
+                    possible_moves.append((direction, next_int))
+                elif next_int is None:
+                    # This is an exit point
+                    possible_moves.append((direction, None))
+
+            if not possible_moves:
+                break
+
+            # Randomly choose next move (bias toward exiting quickly)
+            # 80% chance to go straight if possible (exits network faster)
+            straight_moves = [(d, n) for d, n in possible_moves if d == travel_dir]
+            if straight_moves and np.random.random() < 0.8:
+                chosen_dir, next_int = straight_moves[0]
+            else:
+                chosen_dir, next_int = possible_moves[np.random.randint(len(possible_moves))]
+
+            if next_int is None:
+                # Exit the network
+                break
+
+            route.append(next_int)
+            visited.add(next_int)
+            current_int = next_int
+            travel_dir = chosen_dir
+
+        return route
+
+    # ---------------------------------------------------------------- #
     #  Starter code method: spawn_vehicle  (implemented)                #
     # ---------------------------------------------------------------- #
 
     def spawn_vehicle(self, arrival_rates: Dict[int, Dict[str, float]]) -> None:
         """
-        Spawn new vehicles based on Poisson arrival rates.
+        Spawn new vehicles at network edge approaches only.
 
-        For each (intersection, direction) pair, draw a Poisson random
-        variable with the predicted arrival rate × DT.  Each drawn
-        vehicle becomes a Vehicle object added to that approach's queue.
+        Vehicles enter the network from edge approaches (where roads connect
+        to the outside world) and are assigned a random route through the
+        network to an exit point.
 
         arrival_rates : {intersection_id: {direction: rate_in_veh_per_s}}
                         Comes from the ML model's predict_rates() output.
         """
         for inter in self.intersections:
             iid = inter.id
+            edge_dirs = self.edge_approaches.get(iid, [])
+
             for direction, queue in inter.queues.items():
+                # Only spawn at edge approaches (external network entry points)
+                if direction not in edge_dirs:
+                    continue
+
                 rate = arrival_rates.get(iid, {}).get(direction, 0.03)
 
                 # Apply incident capacity reduction if active
@@ -204,15 +356,21 @@ class TrafficSimulator:
                            'east':  (cx + 0.4, cy),
                            'west':  (cx - 0.4, cy)}
                 pos = offsets[direction]
-                dest = inter.position   # vehicle is heading through this intersection
 
                 for _ in range(n_arrivals):
+                    # Generate random route through the network
+                    route = self._generate_random_route(iid, direction)
+
                     v = Vehicle(
-                        id          = self._vehicle_id_ctr,
-                        position    = pos,
-                        destination = dest,
-                        speed       = VEHICLE_SPEED,
-                        arrived_at  = self.time,
+                        id                  = self._vehicle_id_ctr,
+                        position            = pos,
+                        destination         = inter.position,
+                        speed               = VEHICLE_SPEED,
+                        arrived_at          = self.time,
+                        state               = "queued",
+                        route               = route,
+                        origin_intersection = iid,
+                        current_route_idx   = 0,
                     )
                     self._vehicle_id_ctr += 1
                     queue.append(v)
@@ -246,12 +404,26 @@ class TrafficSimulator:
                     departed   = queue[:n_depart]
                     inter.queues[direction] = queue[n_depart:]
 
-                    # Record wait times and remove from active vehicle list
+                    # Route departing vehicles to next intersection or exit network
                     for v in departed:
                         self.total_wait_time += v.wait_time
-                        self.total_departed  += 1
-                        if v in self.vehicles:
-                            self.vehicles.remove(v)
+                        v.wait_time = 0.0  # Reset wait time for next intersection
+
+                        # Check if more intersections in route
+                        if v.route and v.current_route_idx < len(v.route) - 1:
+                            # Route to next intersection
+                            v.current_route_idx += 1
+                            next_int_id = v.route[v.current_route_idx]
+                            v.state = "traveling"
+                            v.travel_start_time = self.time
+                            v.arrival_direction = self._get_arrival_direction(inter.id, next_int_id)
+                            v.destination = self.intersections[next_int_id].position
+                            self.traveling_vehicles.append(v)
+                        else:
+                            # Vehicle exits the network
+                            self.total_departed += 1
+                            if v in self.vehicles:
+                                self.vehicles.remove(v)
 
             # 3. Accumulate wait time for vehicles still in RED queues
             for direction in inter.red_dirs():
@@ -287,7 +459,32 @@ class TrafficSimulator:
                         'west':  LightState.RED,
                     }
 
+        # 5. Process vehicles traveling between intersections
+        self._process_traveling_vehicles()
+
         self.time += DT
+
+    def _process_traveling_vehicles(self) -> None:
+        """
+        Process vehicles in transit between intersections.
+
+        Vehicles that have completed their travel time arrive at their
+        next intersection and join the appropriate approach queue.
+        """
+        arrived = []
+        for v in self.traveling_vehicles:
+            if self.time >= v.travel_start_time + self.travel_time:
+                # Vehicle arrives at next intersection
+                if v.route is not None and v.current_route_idx < len(v.route):
+                    next_int = self.intersections[v.route[v.current_route_idx]]
+                    if v.arrival_direction:
+                        next_int.queues[v.arrival_direction].append(v)
+                    v.state = "queued"
+                    v.arrived_at = self.time
+                arrived.append(v)
+
+        for v in arrived:
+            self.traveling_vehicles.remove(v)
 
     # ---------------------------------------------------------------- #
     #  Starter code method: update_lights  (implemented)                #
@@ -369,11 +566,12 @@ class TrafficSimulator:
         )
 
         return {
-            'avg_wait_time':  avg_wait,
-            'throughput':     self.total_departed / max(self.time, 1.0),
-            'total_queue':    total_queue,
-            'total_departed': self.total_departed,
-            'time':           self.time,
+            'avg_wait_time':    avg_wait,
+            'throughput':       self.total_departed / max(self.time, 1.0),
+            'total_queue':      total_queue,
+            'total_departed':   self.total_departed,
+            'time':             self.time,
+            'vehicles_in_transit': len(self.traveling_vehicles),
         }
 
     # ---------------------------------------------------------------- #
