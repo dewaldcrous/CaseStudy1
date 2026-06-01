@@ -1266,10 +1266,13 @@ function updateWhatsHappening(hour, mb, mo, imp) {
     } else {
       html += '<span style="color:#3498db"><b>Off-peak</b></span> — Balanced demand<br>';
     }
+    // Always show improvement (stable display)
     if (imp >= 20) {
-      html += '<span style="color:#2ecc71"><b>Target met!</b></span> ' + imp.toFixed(0) + '%';
+      html += '<span style="color:#2ecc71"><b>Improvement: ' + imp.toFixed(0) + '%</b></span>';
     } else if (imp > 0) {
-      html += 'Improvement: ' + imp.toFixed(0) + '%';
+      html += '<span style="color:#f39c12">Improvement: ' + imp.toFixed(0) + '%</span>';
+    } else {
+      html += '<span style="color:#e74c3c">Improvement: ' + imp.toFixed(0) + '%</span>';
     }
   }
   document.getElementById('whats-happening').innerHTML = html;
