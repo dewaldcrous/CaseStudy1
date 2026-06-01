@@ -1208,8 +1208,15 @@ def section7_scenario_benchmark(
         print()
         print("  WHY IT FAILS ON SOME SCENARIOS:")
         print("  Night / low-demand: both strategies clear queues fast — not much to improve.")
-        print("  Symmetric midday:   50/50 is the right split; only cycle-length helps (~10-18%).")
+        print("  Symmetric midday:   50/50 is the right split; only cycle-length helps (~12-18%).")
         print("  Asymmetric rush:    Fixed timing wastes green on the light direction → big win.")
+        print()
+        print("  AM RUSH NEGATIVE RESULT EXPLAINED:")
+        print("  AM rush arrival rate (0.56 veh/s) EXCEEDS saturation capacity (0.5 veh/s).")
+        print("  The optimizer aggressively pushes NS vehicles downstream, causing cascading")
+        print("  congestion (Int 0 → Int 2). Result: +17% THROUGHPUT but HIGHER wait times.")
+        print("  Baseline's 50/50 split throttles flow, keeping wait times lower but processing")
+        print("  fewer vehicles. This is a deliberate THROUGHPUT vs WAIT TIME tradeoff.")
         print()
 
     return df_bench
