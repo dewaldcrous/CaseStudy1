@@ -109,8 +109,8 @@ solution/
 ├── main.py                # Full ML pipeline orchestrator
 ├── ml_model.js            # ML predictions exported for demo.html
 │
-├── dist/                  # ← STANDALONE EXECUTABLE
-│   └── TrafficDemo.exe    # Windows executable (~150MB) - runs without Python
+├── dist/                  # ← STANDALONE EXECUTABLE (build locally - not in repo)
+│   └── TrafficDemo.exe    # Windows executable (~150MB) - run: python scripts/build_exe.py
 │
 ├── scripts/               # Utility scripts (not needed for demos)
 │   ├── build_exe.py       # PyInstaller build script
@@ -130,9 +130,11 @@ solution/
 └── figures/               # Generated analysis charts
 ```
 
-### dist/TrafficDemo.exe — Standalone Executable
+### dist/TrafficDemo.exe — Standalone Executable (Build Locally)
 
-The `dist/` folder contains a **standalone Windows executable** that bundles:
+**Note:** The exe is not included in the repo (~150MB). Build it locally with `python scripts/build_exe.py`
+
+The `dist/` folder will contain a **standalone Windows executable** that bundles:
 - Python 3.x runtime (embedded)
 - All dependencies (numpy, matplotlib, LightGBM, etc.)
 - Trained ML model (`models/best_model.pkl`)
