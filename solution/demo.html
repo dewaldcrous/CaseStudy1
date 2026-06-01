@@ -862,12 +862,21 @@ function drawGrid(sim, canvasId) {
     const ql = inter.queueLengths();
     const isNSGreen = inter.lightStates.north === 'GREEN';
 
-    // Intersection center
+    // Check for incident at this intersection
+    const hasIncident = sim.incidents && sim.incidents[idx] && Object.keys(sim.incidents[idx]).length > 0;
+    const incidentDir = hasIncident ? Object.keys(sim.incidents[idx])[0] : null;
+
+    // Intersection center - red border if incident
     ctx.fillStyle = '#333';
     ctx.fillRect(cx - roadW/2, cy - roadW/2, roadW, roadW);
+    if (hasIncident) {
+      ctx.strokeStyle = '#ff6b6b';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(cx - roadW/2 - 2, cy - roadW/2 - 2, roadW + 4, roadW + 4);
+    }
 
     // ID label with background
-    ctx.fillStyle = '#222';
+    ctx.fillStyle = hasIncident ? '#ff6b6b' : '#222';
     ctx.beginPath();
     ctx.arc(cx, cy, 10, 0, Math.PI*2);
     ctx.fill();
@@ -876,6 +885,31 @@ function drawGrid(sim, canvasId) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(idx, cx, cy);
+
+    // Incident warning marker
+    if (hasIncident) {
+      // Position based on incident direction
+      const warnOffset = roadW/2 + 20;
+      let wx = cx, wy = cy;
+      if (incidentDir === 'north') { wx = cx; wy = cy - warnOffset; }
+      else if (incidentDir === 'south') { wx = cx; wy = cy + warnOffset; }
+      else if (incidentDir === 'east') { wx = cx + warnOffset; wy = cy; }
+      else if (incidentDir === 'west') { wx = cx - warnOffset; wy = cy; }
+
+      // Warning triangle background
+      ctx.fillStyle = '#ff6b6b';
+      ctx.beginPath();
+      ctx.moveTo(wx, wy - 12);
+      ctx.lineTo(wx - 10, wy + 6);
+      ctx.lineTo(wx + 10, wy + 6);
+      ctx.closePath();
+      ctx.fill();
+
+      // Exclamation mark
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('!', wx, wy + 1);
+    }
 
     // Traffic light helper - draws a proper traffic light symbol
     function drawTrafficLight(x, y, isGreen, rotation) {
